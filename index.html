@@ -66,6 +66,13 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .ed{font-size:13px;color:var(--dim);line-height:1.5}
 .fab{position:fixed;bottom:calc(var(--sb) + 64px);right:24px;width:54px;height:54px;border-radius:16px;background:linear-gradient(135deg,#E8A842,#D4793A);border:none;color:#fff;font-size:28px;font-weight:300;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 28px rgba(232,168,66,.35);z-index:30;animation:pi .4s ease .2s both}
 .fab:active{transform:scale(.92)}
+/* Week schedule */
+.wk-day{margin-bottom:10px}
+.wk-label{display:flex;align-items:center;gap:8px;padding:8px 0 6px;font-size:13px;font-weight:700}
+.wk-today{background:var(--aglow);border-radius:8px;padding:2px 8px;color:var(--accent)}
+.wk-tasks{display:flex;flex-direction:column;gap:4px;padding-left:4px}
+.wk-task{font-size:13px;color:var(--mid);padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.wk-none{font-size:12px;color:var(--dim);padding:4px 10px;font-style:italic}
 /* Form */
 .fv{animation:su .3s ease}
 .stl{font-size:18px;font-weight:900;margin-bottom:20px}
@@ -264,7 +271,7 @@ function render(){
   if(!S.dataOk){a.innerHTML='<div class="lw"><div class="sp"></div></div>';return;}
   let html='';
   if(S.tab==='routine'){
-    html=(S.rView==='add'||S.rView==='edit')?renderRForm():renderRHome();
+    html=S.rView==='week'?renderWeek():(S.rView==='add'||S.rView==='edit')?renderRForm():renderRHome();
   }else{
     html=renderFitness();
   }
@@ -283,7 +290,7 @@ function renderRHome(){
   const tasks=todayTasks(),p=rPct(),done=tasks.filter(t=>isComp(t.id)).length,c=2*Math.PI*46;
   const sorted=[...tasks].sort((a,b)=>(isComp(a.id)?1:0)-(isComp(b.id)?1:0));
   return `<div class="app-inner">
-    <div class="header"><div><div class="date-label">${dlabel()}</div><div class="greeting">${greet()}</div></div><button class="hbtn" data-a="logout" title="ログアウト">↗</button></div>
+    <div class="header"><div><div class="date-label">${dlabel()}</div><div class="greeting">${greet()}</div></div><div style="display:flex;gap:6px"><button class="hbtn" data-a="week" title="週間スケジュール">📅</button><button class="hbtn" data-a="logout" title="ログアウト">↗</button></div></div>
     <div class="pw"><div class="rc"><svg viewBox="0 0 104 104"><defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#E8A842"/><stop offset="100%" stop-color="#D4793A"/></linearGradient></defs><circle cx="52" cy="52" r="46" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/><circle cx="52" cy="52" r="46" fill="none" stroke="url(#rg)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(p/100)*c} ${c}" transform="rotate(-90 52 52)" style="transition:stroke-dasharray .7s cubic-bezier(.4,0,.2,1)"/></svg><div class="rt"><div class="rp">${p}%</div><div class="rs">${done}/${tasks.length}</div></div></div></div>
     ${tasks.length===0?`<div class="empty"><div class="ei">🌱</div><div class="et">ルーティンを始めましょう</div><div class="ed">＋ボタンからタスクを追加</div></div>`:`<div class="tl">${sorted.map((t,i)=>{const d=isComp(t.id),sk=getStreak(t);return`<div class="tc ${d?'done':''}" style="animation-delay:${i*.04}s;${S.pop===t.id?'z-index:20':''}"><button class="cb ${d?'ck':''}" data-a="toggle" data-id="${t.id}">${d?'✓':''}</button><div class="tb" data-a="toggle" data-id="${t.id}"><div class="tn">${t.icon} ${esc(t.name)}</div>${sk>0?`<div class="st">🔥 ${sk}回連続</div>`:''}${t.days.length<7?`<div class="td">${dlStr(t.days)}</div>`:''}</div><button class="mb" data-a="more" data-id="${t.id}">⋯</button>${S.pop===t.id?`<div class="po"><button class="pb edt" data-a="edit" data-id="${t.id}">✏️ 編集</button><button class="pb del" data-a="delete" data-id="${t.id}">🗑 削除</button></div>`:''}</div>`;}).join('')}</div>`}
   </div><button class="fab" data-a="add">＋</button>${S.pop?'<div class="bd" data-a="closepop"></div>':''}`;
@@ -296,6 +303,25 @@ function renderRForm(){
     <div class="ig"><label class="il">繰り返し</label><div class="ps"><button class="psb" data-a="preset" data-v="all">毎日</button><button class="psb" data-a="preset" data-v="wd">平日</button><button class="psb" data-a="preset" data-v="we">週末</button></div><div class="dg">${DAYS.map((d,i)=>`<button class="db ${f.days.includes(i)?'ac':''}" data-a="dayT" data-idx="${i}">${d}</button>`).join('')}</div></div>
     <div class="ig"><label class="il">アイコン</label><div class="icg">${R_ICONS.map(ic=>`<button class="icb ${f.icon===ic?'ac':''}" data-a="icon" data-v="${ic}">${ic}</button>`).join('')}</div></div>
     <div class="fa"><button class="bc" data-a="cancel">キャンセル</button><button class="bs" data-a="save" ${f.name.trim()&&f.days.length?'':'disabled'}>${e?'保存する':'追加する'}</button></div></div>`;
+}
+
+// ── Week schedule view ──
+function renderWeek(){
+  const ti=tdi();
+  let html=`<div class="app-inner fv"><div class="stl">📅 週間スケジュール</div>`;
+  for(let d=0;d<7;d++){
+    const isToday=d===ti;
+    const dayTasks=S.tasks.filter(t=>t.days.includes(d));
+    html+=`<div class="wk-day"><div class="wk-label"><span class="${isToday?'wk-today':''}">${DAYS[d]}</span>${isToday?'<span style="font-size:10px;color:var(--dim)">今日</span>':''}</div>`;
+    if(dayTasks.length){
+      html+=`<div class="wk-tasks">${dayTasks.map(t=>`<div class="wk-task">${t.icon} ${esc(t.name)}</div>`).join('')}</div>`;
+    }else{
+      html+=`<div class="wk-none">タスクなし</div>`;
+    }
+    html+=`</div>`;
+  }
+  html+=`<div class="fa"><button class="bc" data-a="weekBack" style="flex:1">← 戻る</button></div></div>`;
+  return html;
 }
 
 // ── Fitness views ──
@@ -429,6 +455,8 @@ function handleA(e){
     case 'delete':S.tasks=S.tasks.filter(t=>t.id!==id);S.pop=null;saveR();toast('削除しました');break;
     case 'edit':{const tk=S.tasks.find(t=>t.id===id);if(tk){S.form={name:tk.name,days:[...tk.days],icon:tk.icon};S.editId=id;S.rView='edit';S.pop=null;render();}}break;
     case 'add':S.form={name:'',days:[0,1,2,3,4,5,6],icon:'✅'};S.rView='add';render();break;
+    case 'week':S.rView='week';S.pop=null;render();break;
+    case 'weekBack':S.rView='home';render();break;
     case 'cancel':S.rView='home';S.editId=null;render();break;
     case 'save':
       if(!S.form.name.trim()||!S.form.days.length)return;

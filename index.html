@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Daily">
+<meta name="theme-color" content="#0F1117">
+<title>Daily</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0F1117;--surface:rgba(255,255,255,0.04);--sh:rgba(255,255,255,0.07);--border:rgba(255,255,255,0.06);--text:#E8E6F0;--dim:rgba(255,255,255,0.35);--mid:rgba(255,255,255,0.55);--accent:#E8A842;--aglow:rgba(232,168,66,0.15);--done:rgba(232,168,66,0.08);--doneb:rgba(232,168,66,0.12);--danger:#E05252;--r:14px;--font:'Zen Kaku Gothic New',-apple-system,sans-serif;--st:env(safe-area-inset-top,20px);--sb:env(safe-area-inset-bottom,20px)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font)}
+body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:relative}
+.app{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.app-inner{padding:calc(var(--st) + 12px) 20px calc(var(--sb) + 70px)}
+.login-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;padding:20px;text-align:center}
+.login-icon{font-size:64px;margin-bottom:16px}
+.login-title{font-size:24px;font-weight:900;margin-bottom:8px;background:linear-gradient(135deg,#E8A842,#D4793A);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-desc{font-size:13px;color:var(--dim);margin-bottom:32px;line-height:1.6}
+.login-btn{display:flex;align-items:center;gap:10px;background:#fff;color:#333;border:none;border-radius:12px;padding:14px 28px;font-size:15px;font-weight:700;font-family:var(--font);cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.3)}
+.login-btn:active{transform:scale(0.95)}
+.login-btn img{width:20px;height:20px}
+/* Bottom tabs */
+.btabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;background:rgba(15,17,23,0.95);backdrop-filter:blur(12px);border-top:1px solid var(--border);padding:8px 0 calc(var(--sb) + 4px);z-index:40}
+.btab{flex:1;background:none;border:none;color:var(--dim);font-size:10px;font-weight:700;font-family:var(--font);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0}
+.btab.active{color:var(--accent)}
+.btab-icon{font-size:20px}
+/* Header */
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
+.date-label{font-size:12px;color:var(--dim);letter-spacing:1.5px;font-weight:500}
+.greeting{font-size:22px;font-weight:900;margin-top:4px;background:linear-gradient(135deg,#E8A842,#D4793A);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hbtn{width:36px;height:36px;border-radius:10px;background:var(--surface);border:1px solid var(--border);color:var(--dim);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.hbtn:active{background:var(--sh)}
+/* Progress Ring */
+.pw{display:flex;justify-content:center;margin-bottom:24px}
+.rc{position:relative;width:110px;height:110px}
+.rc svg{width:100%;height:100%}
+.rt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.rp{font-size:28px;font-weight:900;letter-spacing:-1px}
+.rs{font-size:11px;color:var(--dim);margin-top:1px}
+/* Cards */
+.tl{display:flex;flex-direction:column;gap:6px}
+.tc{display:flex;align-items:center;position:relative;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;transition:all .3s;animation:si .3s ease both}
+.tc.done{background:var(--done);border-color:var(--doneb)}
+.cb{width:26px;height:26px;border-radius:8px;flex-shrink:0;border:2px solid rgba(255,255,255,0.15);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:13px;color:#fff}
+.cb.ck{background:linear-gradient(135deg,#E8A842,#D4793A);border-color:transparent}
+.tb{flex:1;margin-left:12px;cursor:pointer;min-width:0}
+.tn{font-size:14px;font-weight:500;line-height:1.4}
+.tc.done .tn{text-decoration:line-through;opacity:.4}
+.st{display:inline-flex;align-items:center;gap:2px;font-size:11px;color:var(--accent);margin-top:3px;font-weight:500}
+.td{font-size:10px;color:var(--dim);margin-top:2px}
+.mb{background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;padding:4px 6px;border-radius:8px}
+.mb:active{background:var(--sh)}
+.po{position:absolute;right:10px;top:calc(100% + 4px);z-index:20;background:#1E1B2E;border:1px solid var(--border);border-radius:12px;padding:4px;box-shadow:0 12px 32px rgba(0,0,0,.5);animation:pi .15s ease;min-width:120px}
+.pb{background:none;border:none;font-family:var(--font);font-size:13px;cursor:pointer;padding:10px 16px;border-radius:8px;width:100%;text-align:left;white-space:nowrap;font-weight:500}
+.pb.del{color:var(--danger)}.pb.edt{color:var(--text)}.pb:active{background:var(--sh)}
+.empty{text-align:center;padding:50px 20px;animation:fi .5s ease}
+.ei{font-size:48px;margin-bottom:12px}
+.et{font-size:17px;font-weight:700;margin-bottom:6px}
+.ed{font-size:13px;color:var(--dim);line-height:1.5}
+.fab{position:fixed;bottom:calc(var(--sb) + 64px);right:24px;width:54px;height:54px;border-radius:16px;background:linear-gradient(135deg,#E8A842,#D4793A);border:none;color:#fff;font-size:28px;font-weight:300;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 28px rgba(232,168,66,.35);z-index:30;animation:pi .4s ease .2s both}
+.fab:active{transform:scale(.92)}
+/* Form */
+.fv{animation:su .3s ease}
+.stl{font-size:18px;font-weight:900;margin-bottom:20px}
+.ig{margin-bottom:22px}
+.il{display:block;font-size:11px;font-weight:700;color:var(--dim);margin-bottom:8px;letter-spacing:1.5px;text-transform:uppercase}
+.ti{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;color:var(--text);font-size:15px;font-family:var(--font);outline:none}
+.ti:focus{border-color:rgba(232,168,66,.4)}
+.ti::placeholder{color:var(--dim)}
+.dg{display:flex;gap:6px}
+.db{flex:1;aspect-ratio:1;border-radius:10px;background:var(--surface);border:1.5px solid var(--border);color:var(--mid);font-size:13px;font-weight:700;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.db.ac{background:var(--aglow);border-color:var(--accent);color:var(--accent)}
+.db:active{transform:scale(.92)}
+.ps{display:flex;gap:6px;margin-bottom:10px}
+.psb{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:11px;color:var(--mid);font-family:var(--font);cursor:pointer;font-weight:500}
+.psb:active{background:var(--sh)}
+.icg{display:flex;flex-wrap:wrap;gap:6px}
+.icb{width:42px;height:42px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.icb.ac{background:var(--aglow);border-color:var(--accent);transform:scale(1.1)}
+.icb:active{transform:scale(.9)}
+.fa{display:flex;gap:10px;margin-top:28px}
+.bc{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;color:var(--mid);font-size:15px;font-family:var(--font);font-weight:500;cursor:pointer}
+.bs{flex:2;background:linear-gradient(135deg,#E8A842,#D4793A);border:none;border-radius:12px;padding:14px;color:#fff;font-size:15px;font-family:var(--font);font-weight:700;cursor:pointer}
+.bs:disabled{opacity:.35}
+.bc:active{background:var(--sh)}
+/* Fitness */
+.dn{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px}
+.dnb{background:none;border:none;color:var(--mid);font-size:18px;cursor:pointer;padding:4px 8px}
+.dnb:active{color:var(--accent)}
+.dnc{text-align:center}
+.dnd{font-size:15px;font-weight:700}
+.dns{font-size:11px;color:var(--dim);margin-top:2px}
+.today-badge{font-size:9px;background:var(--accent);color:#000;border-radius:4px;padding:1px 5px;margin-left:6px;font-weight:700}
+.ftabs{display:flex;gap:6px;margin-bottom:16px}
+.ftab{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;font-size:12px;font-weight:700;font-family:var(--font);cursor:pointer;color:var(--mid);text-align:center}
+.ftab.active{background:var(--aglow);border-color:var(--accent);color:var(--accent)}
+.ftab:active{transform:scale(.97)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px}
+.card-title{font-size:12px;font-weight:700;color:var(--dim);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase}
+.set-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.set-label{font-size:11px;color:var(--dim);width:32px;flex-shrink:0}
+.set-input{flex:1;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:14px;font-family:var(--font);outline:none;text-align:center}
+.set-input:focus{border-color:rgba(232,168,66,.3)}
+.set-unit{font-size:11px;color:var(--dim);width:24px;flex-shrink:0}
+.prev-val{font-size:10px;color:var(--dim);margin-bottom:8px}
+.summary-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.summary-val{font-weight:700;color:var(--accent)}
+.report-btn{width:100%;padding:14px;margin-top:8px;background:var(--aglow);border:1px solid rgba(232,168,66,.2);border-radius:12px;color:var(--accent);font-size:13px;font-weight:700;font-family:var(--font);cursor:pointer}
+.report-btn:active{transform:scale(.97)}
+.toast{position:fixed;bottom:calc(var(--sb) + 80px);left:50%;transform:translateX(-50%);background:rgba(30,27,46,.95);border:1px solid rgba(232,168,66,.2);border-radius:12px;padding:10px 20px;font-size:13px;font-weight:500;color:var(--accent);z-index:60;white-space:nowrap;animation:ti .3s ease}
+.bd{position:fixed;inset:0;z-index:15}
+.lw{display:flex;align-items:center;justify-content:center;height:100vh}
+.sp{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sn .8s linear infinite}
+@keyframes si{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes su{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+@keyframes pi{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+@keyframes ti{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes sn{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import{getAuth,signInWithPopup,signInWithRedirect,getRedirectResult,GoogleAuthProvider,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+import{getFirestore,doc,setDoc,onSnapshot}from"https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+const fbApp=initializeApp({apiKey:"AIzaSyDlttoYqI42olx_khQY2MbxAgQcozD57p4",authDomain:"routine-app-5eff3.firebaseapp.com",projectId:"routine-app-5eff3",storageBucket:"routine-app-5eff3.firebasestorage.app",messagingSenderId:"282023583014",appId:"1:282023583014:web:4669d57d2ddcce7146f5e7"});
+const auth=getAuth(fbApp),db=getFirestore(fbApp);
+
+// ── Constants ──
+const DAYS=['月','火','水','木','金','土','日'],DAY_MAP={1:0,2:1,3:2,4:3,5:4,6:5,0:6};
+const R_ICONS=['✅','💪','📖','🏃','💊','🧘','🎸','💻','🥗','💧','🧹','📝','🛏','🌿','☕','🦷','📧','🎯','🧠','🚿','💤','🍳'];
+const SCHEDULE={1:{type:'workout',label:'筋トレA（スクワット）',w:'A'},2:{type:'run',label:'ランニング（ゾーン3）'},3:{type:'workout',label:'筋トレB（ベンチプレス）',w:'B'},4:{type:'run',label:'ランニング（ゾーン3）'},5:{type:'rest',label:'完全休養'},6:{type:'workout',label:'筋トレC（デッドリフト）',w:'C'},0:{type:'run',label:'ランニング（ロング）'}};
+const WORKOUTS={
+  A:[{id:'squat',name:'バックスクワット',sets:3,reps:'6-8'},{id:'bss',name:'ブルガリアンスプリットスクワット',sets:3,reps:'8-10'},{id:'pullupA',name:'懸垂',sets:3,reps:'限界',bw:true},{id:'core',name:'アブローラー',sets:3,reps:'—',bw:true}],
+  B:[{id:'bench',name:'ベンチプレス',sets:3,reps:'6-8'},{id:'ohp',name:'OHP',sets:3,reps:'8-10'},{id:'pullupB',name:'懸垂',sets:3,reps:'限界',bw:true},{id:'dbrow',name:'ダンベルロウ',sets:3,reps:'8-10'}],
+  C:[{id:'deadlift',name:'デッドリフト',sets:3,reps:'5-6'},{id:'rdl',name:'RDL',sets:3,reps:'8-10'},{id:'pullupC',name:'懸垂',sets:3,reps:'限界',bw:true},{id:'farmwalk',name:'ファーマーズウォーク',sets:3,reps:'30-40m'}]
+};
+const DN=['日','月','火','水','木','金','土'];
+
+// ── State ──
+let S={user:null,authOk:false,dataOk:false,
+  // routine
+  tasks:[],comps:{},rView:'home',editId:null,pop:null,form:{name:'',days:[0,1,2,3,4,5,6],icon:'✅'},
+  // fitness
+  fit:{workouts:{},runs:{},weight:{},meals:{}},fDate:fmtD(new Date()),fTab:'log',
+  // global
+  tab:'routine',toast:null,unsub:[]};
+let toastT;
+
+// ── Helpers ──
+function fmtD(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function parseD(s){const[y,m,d]=s.split('-');return new Date(y,m-1,d);}
+function tdi(){return DAY_MAP[new Date().getDay()];}
+function greet(){const h=new Date().getHours();return h<12?'おはよう':h<17?'こんにちは':'おつかれさま';}
+function dlabel(){const d=new Date(),w=DN[d.getDay()];return `${d.getMonth()+1}月${d.getDate()}日（${w}）`;}
+function dlStr(days){return days.length===7?'毎日':days.map(i=>DAYS[i]).join('・');}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function toast(m){S.toast=m;render();clearTimeout(toastT);toastT=setTimeout(()=>{S.toast=null;render();},1800);}
+
+// ── Firebase ──
+function startSync(uid){
+  S.unsub.forEach(u=>u());S.unsub=[];
+  S.unsub.push(onSnapshot(doc(db,'users',uid,'data','tasks'),s=>{if(s.exists())S.tasks=s.data().items||[];S.dataOk=true;render();}));
+  S.unsub.push(onSnapshot(doc(db,'users',uid,'data','completions'),s=>{if(s.exists())S.comps=s.data().entries||{};render();}));
+  S.unsub.push(onSnapshot(doc(db,'users',uid,'data','fitness'),s=>{if(s.exists()){const d=s.data();S.fit={workouts:d.workouts||{},runs:d.runs||{},weight:d.weight||{},meals:d.meals||{}};}render();}));
+}
+async function saveR(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','tasks'),{items:S.tasks});}catch(e){}}
+async function saveC(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','completions'),{entries:S.comps});}catch(e){}}
+async function saveF(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','fitness'),S.fit);}catch(e){}}
+
+onAuthStateChanged(auth,u=>{S.user=u;S.authOk=true;if(u)startSync(u.uid);else{S.dataOk=false;S.tasks=[];S.comps={};S.fit={workouts:{},runs:{},weight:{},meals:{}};render();}});
+getRedirectResult(auth).catch(()=>{});
+async function login(){const p=new GoogleAuthProvider();try{await signInWithPopup(auth,p);}catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/popup-closed-by-user')await signInWithRedirect(auth,p);}}
+async function logout(){S.unsub.forEach(u=>u());S.unsub=[];await signOut(auth);}
+
+// ── Routine logic ──
+function todayTasks(){return S.tasks.filter(t=>t.days.includes(tdi()));}
+function isComp(id){return !!S.comps[`${fmtD(new Date())}:${id}`];}
+function toggleComp(id){const k=`${fmtD(new Date())}:${id}`;if(S.comps[k])delete S.comps[k];else S.comps[k]=Date.now();saveC();render();}
+function getStreak(t){let s=0;const d=new Date();if(t.days.includes(DAY_MAP[d.getDay()])&&S.comps[`${fmtD(d)}:${t.id}`])s=1;d.setDate(d.getDate()-1);for(let i=0;i<365;i++){if(t.days.includes(DAY_MAP[d.getDay()])){if(S.comps[`${fmtD(d)}:${t.id}`])s++;else break;}d.setDate(d.getDate()-1);}return s;}
+function rPct(){const t=todayTasks();return t.length?Math.round(t.filter(x=>isComp(x.id)).length/t.length*100):0;}
+
+// ── Fitness helpers ──
+function getPrev(exId,beforeDate){const dates=Object.keys(S.fit.workouts).filter(d=>d<beforeDate).sort().reverse();for(const d of dates){const w=S.fit.workouts[d];if(w&&w[exId])return w[exId];}return null;}
+
+// ── Render ──
+function render(){
+  const a=document.getElementById('app');
+  if(!S.authOk){a.innerHTML='<div class="lw"><div class="sp"></div></div>';return;}
+  if(!S.user){a.innerHTML=renderLogin();bind();return;}
+  if(!S.dataOk){a.innerHTML='<div class="lw"><div class="sp"></div></div>';return;}
+  let html='';
+  if(S.tab==='routine'){
+    html=(S.rView==='add'||S.rView==='edit')?renderRForm():renderRHome();
+  }else{
+    html=renderFitness();
+  }
+  html+=renderBTabs();
+  if(S.toast)html+=`<div class="toast">${esc(S.toast)}</div>`;
+  a.innerHTML=html;
+  bind();
+}
+
+function renderLogin(){return `<div class="login-wrap"><div class="login-icon">🌱</div><div class="login-title">Daily</div><div class="login-desc">ルーティン＆フィットネス管理<br>デバイス間で自動同期</div><button class="login-btn" data-a="login"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">Googleでログイン</button></div>`;}
+
+function renderBTabs(){return `<div class="btabs"><button class="btab ${S.tab==='routine'?'active':''}" data-a="switchTab" data-v="routine"><span class="btab-icon">✅</span>ルーティン</button><button class="btab ${S.tab==='fitness'?'active':''}" data-a="switchTab" data-v="fitness"><span class="btab-icon">💪</span>トレーニング</button></div>`;}
+
+// ── Routine views ──
+function renderRHome(){
+  const tasks=todayTasks(),p=rPct(),done=tasks.filter(t=>isComp(t.id)).length,c=2*Math.PI*46;
+  const sorted=[...tasks].sort((a,b)=>(isComp(a.id)?1:0)-(isComp(b.id)?1:0));
+  return `<div class="app-inner">
+    <div class="header"><div><div class="date-label">${dlabel()}</div><div class="greeting">${greet()}</div></div><button class="hbtn" data-a="logout" title="ログアウト">↗</button></div>
+    <div class="pw"><div class="rc"><svg viewBox="0 0 104 104"><defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#E8A842"/><stop offset="100%" stop-color="#D4793A"/></linearGradient></defs><circle cx="52" cy="52" r="46" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/><circle cx="52" cy="52" r="46" fill="none" stroke="url(#rg)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(p/100)*c} ${c}" transform="rotate(-90 52 52)" style="transition:stroke-dasharray .7s cubic-bezier(.4,0,.2,1)"/></svg><div class="rt"><div class="rp">${p}%</div><div class="rs">${done}/${tasks.length}</div></div></div></div>
+    ${tasks.length===0?`<div class="empty"><div class="ei">🌱</div><div class="et">ルーティンを始めましょう</div><div class="ed">＋ボタンからタスクを追加</div></div>`:`<div class="tl">${sorted.map((t,i)=>{const d=isComp(t.id),sk=getStreak(t);return`<div class="tc ${d?'done':''}" style="animation-delay:${i*.04}s"><button class="cb ${d?'ck':''}" data-a="toggle" data-id="${t.id}">${d?'✓':''}</button><div class="tb" data-a="toggle" data-id="${t.id}"><div class="tn">${t.icon} ${esc(t.name)}</div>${sk>0?`<div class="st">🔥 ${sk}回連続</div>`:''}${t.days.length<7?`<div class="td">${dlStr(t.days)}</div>`:''}</div><button class="mb" data-a="more" data-id="${t.id}">⋯</button>${S.pop===t.id?`<div class="po"><button class="pb edt" data-a="edit" data-id="${t.id}">✏️ 編集</button><button class="pb del" data-a="delete" data-id="${t.id}">🗑 削除</button></div>`:''}</div>`;}).join('')}</div>`}
+  </div><button class="fab" data-a="add">＋</button>${S.pop?'<div class="bd" data-a="closepop"></div>':''}`;
+}
+
+function renderRForm(){
+  const e=S.rView==='edit',f=S.form;
+  return `<div class="app-inner fv"><div class="stl">${e?'ルーティンを編集':'新しいルーティン'}</div>
+    <div class="ig"><label class="il">タスク名</label><input class="ti" id="ni" value="${esc(f.name)}" placeholder="例: 朝のストレッチ" autofocus></div>
+    <div class="ig"><label class="il">繰り返し</label><div class="ps"><button class="psb" data-a="preset" data-v="all">毎日</button><button class="psb" data-a="preset" data-v="wd">平日</button><button class="psb" data-a="preset" data-v="we">週末</button></div><div class="dg">${DAYS.map((d,i)=>`<button class="db ${f.days.includes(i)?'ac':''}" data-a="dayT" data-idx="${i}">${d}</button>`).join('')}</div></div>
+    <div class="ig"><label class="il">アイコン</label><div class="icg">${R_ICONS.map(ic=>`<button class="icb ${f.icon===ic?'ac':''}" data-a="icon" data-v="${ic}">${ic}</button>`).join('')}</div></div>
+    <div class="fa"><button class="bc" data-a="cancel">キャンセル</button><button class="bs" data-a="save" ${f.name.trim()&&f.days.length?'':'disabled'}>${e?'保存する':'追加する'}</button></div></div>`;
+}
+
+// ── Fitness views ──
+function renderFitness(){
+  const sel=parseD(S.fDate),dow=sel.getDay(),sch=SCHEDULE[dow],isToday=S.fDate===fmtD(new Date());
+  return `<div class="app-inner">
+    <div class="header"><div><div class="date-label">トレーニング</div><div class="greeting">💪 FITNESS</div></div><button class="hbtn" data-a="logout">↗</button></div>
+    <div class="dn"><button class="dnb" data-a="dPrev">◀</button><div class="dnc"><div class="dnd">${sel.getMonth()+1}/${sel.getDate()}（${DN[dow]}）${isToday?'<span class="today-badge">TODAY</span>':''}</div><div class="dns">${sch.label}</div></div><button class="dnb" data-a="dNext">▶</button></div>
+    <div class="ftabs"><button class="ftab ${S.fTab==='log'?'active':''}" data-a="fTab" data-v="log">記録</button><button class="ftab ${S.fTab==='summary'?'active':''}" data-a="fTab" data-v="summary">週次</button></div>
+    ${S.fTab==='log'?renderFLog(sch):renderFSummary()}
+  </div>`;
+}
+
+function renderFLog(sch){
+  const d=S.fDate;
+  let html='';
+  // Weight & Meal
+  const wVal=S.fit.weight[d]||'';
+  const mVal=S.fit.meals[d]||'';
+  html+=`<div class="card"><div class="card-title">体重 & 食事</div><div class="set-row"><input class="set-input" data-a="fWeight" value="${wVal}" placeholder="65.0" inputmode="decimal"><div class="set-unit">kg</div></div><div style="margin-top:6px"><input class="set-input" style="text-align:left;width:100%" data-a="fMeal" value="${esc(mVal)}" placeholder="例: P120g、フェイジョン多め"></div></div>`;
+
+  if(sch.type==='workout'&&sch.w){
+    const exercises=WORKOUTS[sch.w];
+    const saved=S.fit.workouts[d]||{};
+    exercises.forEach(ex=>{
+      const prev=getPrev(ex.id,d);
+      const data=saved[ex.id]||{};
+      html+=`<div class="card"><div class="card-title">${ex.name} <span style="color:var(--dim);font-weight:400">${ex.reps}</span>${ex.bw?'<span style="font-size:9px;background:var(--aglow);color:var(--accent);padding:1px 5px;border-radius:4px;margin-left:6px">自重</span>':''}</div>`;
+      if(prev){
+        if(ex.bw){
+          const prevReps=prev.s1r||prev.s2r||prev.s3r||'-';
+          html+=`<div class="prev-val">前回: ${prevReps}回</div>`;
+        }else{
+          html+=`<div class="prev-val">前回: ${prev.s1w||'-'}kg × ${prev.s1r||'-'}</div>`;
+        }
+      }
+      for(let i=1;i<=ex.sets;i++){
+        if(ex.bw){
+          html+=`<div class="set-row"><div class="set-label">S${i}</div><input class="set-input" data-a="fSet" data-ex="${ex.id}" data-s="s${i}r" value="${data[`s${i}r`]||''}" placeholder="回" inputmode="numeric"><div class="set-unit">回</div></div>`;
+        }else{
+          html+=`<div class="set-row"><div class="set-label">S${i}</div><input class="set-input" data-a="fSet" data-ex="${ex.id}" data-s="s${i}w" value="${data[`s${i}w`]||''}" placeholder="kg" inputmode="decimal"><div class="set-unit">kg</div><input class="set-input" data-a="fSet" data-ex="${ex.id}" data-s="s${i}r" value="${data[`s${i}r`]||''}" placeholder="回" inputmode="numeric"><div class="set-unit">回</div></div>`;
+        }
+      }
+      html+=`</div>`;
+    });
+  }else if(sch.type==='run'){
+    const r=S.fit.runs[d]||{};
+    const dist=parseFloat(r.distance)||0,dur=parseFloat(r.duration)||0;
+    let autoPace='—';
+    if(dist>0&&dur>0){const pt=dur/dist;autoPace=`${Math.floor(pt)}:${String(Math.round((pt-Math.floor(pt))*60)).padStart(2,'0')}`;}
+    html+=`<div class="card"><div class="card-title">ランニング</div>
+      <div class="set-row"><div class="set-label">距離</div><input class="set-input" data-a="fRun" data-f="distance" value="${r.distance||''}" placeholder="5.0" inputmode="decimal"><div class="set-unit">km</div></div>
+      <div class="set-row"><div class="set-label">時間</div><input class="set-input" data-a="fRun" data-f="duration" value="${r.duration||''}" placeholder="40" inputmode="numeric"><div class="set-unit">分</div></div>
+      <div class="set-row"><div class="set-label">心拍</div><input class="set-input" data-a="fRun" data-f="hr" value="${r.hr||''}" placeholder="145" inputmode="numeric"><div class="set-unit">bpm</div></div>
+      <div class="set-row"><div class="set-label">ペース</div><div class="set-input" style="border-color:transparent;background:transparent;color:var(--text)">${autoPace}</div><div class="set-unit">/km</div></div>
+    </div>`;
+    html+=`<div class="card"><div class="card-title">メモ</div><div><input class="set-input" style="text-align:left;width:100%" data-a="fRun" data-f="note" value="${esc(r.note||'')}" placeholder="体調、天気など"></div></div>`;
+  }else{
+    html+=`<div class="empty" style="padding:30px"><div class="ei">😴</div><div class="et">休養日</div><div class="ed">しっかり休んでください</div></div>`;
+  }
+  return html;
+}
+
+function renderFSummary(){
+  const sel=parseD(S.fDate),day=sel.getDay(),diff=day===0?6:day-1;
+  const ws=new Date(sel);ws.setDate(ws.getDate()-diff);
+  let wkCount=0,runCount=0,totalDist=0,weights=[],prs={},bwPrs={};
+  const allEx=[...WORKOUTS.A,...WORKOUTS.B,...WORKOUTS.C];
+  const exMap={};const bwMap={};allEx.forEach(e=>{exMap[e.id]=e.name;if(e.bw)bwMap[e.id]=true;});
+  for(let i=0;i<7;i++){
+    const d=new Date(ws);d.setDate(d.getDate()+i);const ds=fmtD(d),dow=d.getDay(),sch=SCHEDULE[dow];
+    if(S.fit.weight[ds])weights.push(parseFloat(S.fit.weight[ds]));
+    if(sch.type==='workout'&&S.fit.workouts[ds]){wkCount++;const w=S.fit.workouts[ds];Object.entries(w).forEach(([exId,data])=>{
+      if(bwMap[exId]){for(let s=1;s<=3;s++){const r=parseFloat(data[`s${s}r`]);if(r&&(!bwPrs[exId]||r>bwPrs[exId]))bwPrs[exId]=r;}}
+      else{for(let s=1;s<=3;s++){const wt=parseFloat(data[`s${s}w`]);if(wt&&(!prs[exId]||wt>prs[exId]))prs[exId]=wt;}}
+    });}
+    if(sch.type==='run'&&S.fit.runs[ds]&&S.fit.runs[ds].distance){runCount++;totalDist+=parseFloat(S.fit.runs[ds].distance)||0;}
+  }
+  const avgW=weights.length?Math.round(weights.reduce((a,b)=>a+b,0)/weights.length*10)/10:null;
+
+  let html=`<div class="card"><div class="card-title">週次サマリー（${ws.getMonth()+1}/${ws.getDate()}〜）</div>`;
+  html+=`<div class="summary-row"><span>筋トレ</span><span class="summary-val">${wkCount}回</span></div>`;
+  html+=`<div class="summary-row"><span>ラン</span><span class="summary-val">${runCount}回 / ${totalDist.toFixed(1)}km</span></div>`;
+  if(avgW)html+=`<div class="summary-row"><span>平均体重</span><span class="summary-val">${avgW}kg</span></div>`;
+  html+=`</div>`;
+
+  if(Object.keys(prs).length>0||Object.keys(bwPrs).length>0){
+    html+=`<div class="card"><div class="card-title">今週のベスト</div>`;
+    Object.entries(prs).forEach(([id,w])=>{html+=`<div class="summary-row"><span>${exMap[id]||id}</span><span class="summary-val">${w}kg</span></div>`;});
+    Object.entries(bwPrs).forEach(([id,r])=>{html+=`<div class="summary-row"><span>${exMap[id]||id}</span><span class="summary-val">${r}回</span></div>`;});
+    html+=`</div>`;
+  }
+
+  // Day-by-day
+  html+=`<div class="card"><div class="card-title">日別</div>`;
+  for(let i=0;i<7;i++){
+    const d=new Date(ws);d.setDate(d.getDate()+i);const ds=fmtD(d),dow=d.getDay(),sch=SCHEDULE[dow];
+    let done=false;
+    if(sch.type==='workout')done=!!S.fit.workouts[ds];
+    else if(sch.type==='run')done=!!S.fit.runs[ds]&&!!S.fit.runs[ds].distance;
+    else done=true;
+    html+=`<div class="summary-row" style="font-size:12px"><span>${DN[dow]} ${d.getDate()}日 <span style="color:var(--dim)">${sch.label}</span></span><span style="color:${done?'var(--accent)':'var(--dim)'}"> ${done?'✓':'—'}</span></div>`;
+  }
+  html+=`</div>`;
+
+  // Report button
+  html+=`<button class="report-btn" data-a="fReport">Claudeに週次レポートを送信</button>`;
+  return html;
+}
+
+// ── Events ──
+function bind(){
+  document.querySelectorAll('[data-a]').forEach(el=>el.addEventListener('click',handleA));
+  document.querySelectorAll('[data-a]').forEach(el=>{if(el.tagName==='INPUT')el.addEventListener('change',handleA);});
+  const ni=document.getElementById('ni');
+  if(ni)ni.addEventListener('input',e=>{S.form.name=e.target.value;const b=document.querySelector('[data-a="save"]');if(b)b.disabled=!(S.form.name.trim()&&S.form.days.length);});
+}
+
+function handleA(e){
+  const el=e.currentTarget,a=el.dataset.a,id=el.dataset.id,v=el.dataset.v;
+  switch(a){
+    case 'login':login();break;
+    case 'logout':logout();break;
+    case 'switchTab':S.tab=v;S.rView='home';S.pop=null;render();break;
+    // Routine
+    case 'toggle':toggleComp(id);break;
+    case 'more':e.stopPropagation();S.pop=S.pop===id?null:id;render();break;
+    case 'closepop':S.pop=null;render();break;
+    case 'delete':S.tasks=S.tasks.filter(t=>t.id!==id);S.pop=null;saveR();toast('削除しました');break;
+    case 'edit':{const tk=S.tasks.find(t=>t.id===id);if(tk){S.form={name:tk.name,days:[...tk.days],icon:tk.icon};S.editId=id;S.rView='edit';S.pop=null;render();}}break;
+    case 'add':S.form={name:'',days:[0,1,2,3,4,5,6],icon:'✅'};S.rView='add';render();break;
+    case 'cancel':S.rView='home';S.editId=null;render();break;
+    case 'save':
+      if(!S.form.name.trim()||!S.form.days.length)return;
+      if(S.rView==='edit'&&S.editId){const t=S.tasks.find(t=>t.id===S.editId);if(t){t.name=S.form.name.trim();t.days=[...S.form.days];t.icon=S.form.icon;}}
+      else S.tasks.push({id:'t_'+Date.now(),name:S.form.name.trim(),days:[...S.form.days],icon:S.form.icon,createdAt:Date.now()});
+      saveR();S.rView='home';S.editId=null;toast('保存しました');break;
+    case 'dayT':{const idx=parseInt(el.dataset.idx),i=S.form.days.indexOf(idx);if(i>=0)S.form.days.splice(i,1);else S.form.days.push(idx);S.form.days.sort((a,b)=>a-b);render();}break;
+    case 'preset':{const map={all:[0,1,2,3,4,5,6],wd:[0,1,2,3,4],we:[5,6]};S.form.days=map[v];render();}break;
+    case 'icon':S.form.icon=v;render();break;
+    // Fitness
+    case 'dPrev':{const d=parseD(S.fDate);d.setDate(d.getDate()-1);S.fDate=fmtD(d);render();}break;
+    case 'dNext':{const d=parseD(S.fDate);d.setDate(d.getDate()+1);S.fDate=fmtD(d);render();}break;
+    case 'fTab':S.fTab=v;render();break;
+    case 'fWeight':S.fit.weight[S.fDate]=el.value;saveF();break;
+    case 'fSet':{const ex=el.dataset.ex,s=el.dataset.s;if(!S.fit.workouts[S.fDate])S.fit.workouts[S.fDate]={};if(!S.fit.workouts[S.fDate][ex])S.fit.workouts[S.fDate][ex]={};S.fit.workouts[S.fDate][ex][s]=el.value;saveF();}break;
+    case 'fRun':{const f=el.dataset.f;if(!S.fit.runs[S.fDate])S.fit.runs[S.fDate]={};S.fit.runs[S.fDate][f]=el.value;saveF();render();}break;
+    case 'fMeal':S.fit.meals[S.fDate]=el.value;saveF();break;
+    case 'fReport':sendReport();break;
+  }
+}
+function sendReport(){
+  const sel=parseD(S.fDate),day=sel.getDay(),diff=day===0?6:day-1;
+  const ws=new Date(sel);ws.setDate(ws.getDate()-diff);
+  const we=new Date(ws);we.setDate(we.getDate()+6);
+  const lines=[`【週次レポート】${ws.getMonth()+1}/${ws.getDate()}〜${we.getMonth()+1}/${we.getDate()}`];
+  let wkC=0,rnC=0,totD=0;const weights=[];
+  const allEx=[...WORKOUTS.A,...WORKOUTS.B,...WORKOUTS.C];
+  const exMap={};const bwMap={};allEx.forEach(e=>{exMap[e.id]=e.name;if(e.bw)bwMap[e.id]=true;});
+  const prs={},bwPrs={};
+  for(let i=0;i<7;i++){
+    const d=new Date(ws);d.setDate(d.getDate()+i);const ds=fmtD(d),dow=d.getDay(),sch=SCHEDULE[dow];
+    if(S.fit.weight[ds])weights.push(parseFloat(S.fit.weight[ds]));
+    if(sch.type==='workout'&&S.fit.workouts[ds]){wkC++;Object.entries(S.fit.workouts[ds]).forEach(([exId,data])=>{
+      if(bwMap[exId]){for(let s=1;s<=3;s++){const r=parseFloat(data[`s${s}r`]);if(r&&(!bwPrs[exId]||r>bwPrs[exId]))bwPrs[exId]=r;}}
+      else{for(let s=1;s<=3;s++){const wt=parseFloat(data[`s${s}w`]);if(wt&&(!prs[exId]||wt>prs[exId]))prs[exId]=wt;}}
+    });}
+    if(sch.type==='run'&&S.fit.runs[ds]&&S.fit.runs[ds].distance){rnC++;totD+=parseFloat(S.fit.runs[ds].distance)||0;}
+  }
+  lines.push(`筋トレ: ${wkC}回 / ラン: ${rnC}回 / 走行: ${totD.toFixed(1)}km`);
+  const avgW=weights.length?Math.round(weights.reduce((a,b)=>a+b,0)/weights.length*10)/10:null;
+  if(avgW)lines.push(`平均体重: ${avgW}kg`);
+  if(Object.keys(prs).length>0||Object.keys(bwPrs).length>0){
+    lines.push('ベスト:');
+    Object.entries(prs).forEach(([id,w])=>lines.push(`  ${exMap[id]}: ${w}kg`));
+    Object.entries(bwPrs).forEach(([id,r])=>lines.push(`  ${exMap[id]}: ${r}回`));
+  }
+  for(let i=0;i<7;i++){
+    const d=new Date(ws);d.setDate(d.getDate()+i);const ds=fmtD(d);
+    if(S.fit.runs[ds]&&S.fit.runs[ds].distance){
+      const r=S.fit.runs[ds],dist=parseFloat(r.distance)||0,dur=parseFloat(r.duration)||0;
+      let pace='—';if(dist>0&&dur>0){const pt=dur/dist;pace=`${Math.floor(pt)}:${String(Math.round((pt-Math.floor(pt))*60)).padStart(2,'0')}`;}
+      lines.push(`ラン(${ds}): ${r.distance}km ${pace}/km HR${r.hr||'—'} ${r.duration||'—'}min`);
+    }
+  }
+  if(typeof sendPrompt==='function'){sendPrompt('週次レポートです:\n'+lines.join('\n'));}
+  else{navigator.clipboard.writeText(lines.join('\n')).then(()=>toast('レポートをコピーしました'));}
+}
+render();
+</script>
+</body>
+</html>

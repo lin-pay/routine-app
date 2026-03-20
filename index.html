@@ -436,7 +436,7 @@ function renderFSummary(){
 
 // ── Events ──
 function bind(){
-  document.querySelectorAll('[data-a]').forEach(el=>el.addEventListener('click',handleA));
+  document.querySelectorAll('[data-a]').forEach(el=>{if(el.tagName!=='INPUT'&&el.tagName!=='TEXTAREA')el.addEventListener('click',handleA);});
   document.querySelectorAll('[data-a]').forEach(el=>{if(el.tagName==='INPUT'||el.tagName==='TEXTAREA')el.addEventListener('change',handleA);});
   const ni=document.getElementById('ni');
   if(ni)ni.addEventListener('input',e=>{S.form.name=e.target.value;const b=document.querySelector('[data-a="save"]');if(b)b.disabled=!(S.form.name.trim()&&S.form.days.length);});
@@ -472,7 +472,7 @@ function handleA(e){
     case 'fTab':S.fTab=v;render();break;
     case 'fWeight':S.fit.weight[S.fDate]=el.value;saveF();break;
     case 'fSet':{const ex=el.dataset.ex,s=el.dataset.s;if(!S.fit.workouts[S.fDate])S.fit.workouts[S.fDate]={};if(!S.fit.workouts[S.fDate][ex])S.fit.workouts[S.fDate][ex]={};S.fit.workouts[S.fDate][ex][s]=el.value;saveF();}break;
-    case 'fRun':{const f=el.dataset.f;if(!S.fit.runs[S.fDate])S.fit.runs[S.fDate]={};S.fit.runs[S.fDate][f]=el.value;saveF();render();}break;
+    case 'fRun':{const f=el.dataset.f;if(!S.fit.runs[S.fDate])S.fit.runs[S.fDate]={};S.fit.runs[S.fDate][f]=el.value;saveF();if(f==='distance'||f==='duration'){const r=S.fit.runs[S.fDate],dist=parseFloat(r.distance)||0,dur=parseFloat(r.duration)||0;let pace='—';if(dist>0&&dur>0){const pt=dur/dist;pace=`${Math.floor(pt)}:${String(Math.round((pt-Math.floor(pt))*60)).padStart(2,'0')}`;}const pe=document.querySelector('.fit-pace');if(pe)pe.textContent=pace;}}break;
     case 'fMeal':S.fit.meals[S.fDate]=el.value;saveF();break;
     case 'fToday':S.fDate=fmtD(new Date());render();break;
     case 'fReport':sendReport();break;

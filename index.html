@@ -221,7 +221,7 @@ const DN=['日','月','火','水','木','金','土'];
 // ── State ──
 let S={user:null,authOk:false,dataOk:false,
   // routine
-  tasks:[],comps:{},rView:'home',rDate:0,editId:null,pop:null,form:{name:'',days:[0,1,2,3,4,5,6],icon:'✅'},
+  tasks:[],comps:{},rView:'home',editId:null,pop:null,form:{name:'',days:[0,1,2,3,4,5,6],icon:'✅'},
   // fitness
   fit:{workouts:{},runs:{},weight:{},meals:{}},fDate:fmtD(new Date()),fTab:'log',reports:[],reportIdx:0,
   // global
@@ -233,7 +233,7 @@ function fmtD(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,
 function parseD(s){const[y,m,d]=s.split('-');return new Date(y,m-1,d);}
 function tdi(){return DAY_MAP[new Date().getDay()];}
 function greet(){const h=new Date().getHours();return h<12?'おはよう':h<17?'こんにちは':'おつかれさま';}
-function dlabel(){const d=rDateObj(),w=DN[d.getDay()];return `${d.getMonth()+1}月${d.getDate()}日（${w}）`;}
+function dlabel(){const d=new Date(),w=DN[d.getDay()];return `${d.getMonth()+1}月${d.getDate()}日（${w}）`;}
 function dlStr(days){return days.length===7?'毎日':days.map(i=>DAYS[i]).join('・');}
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 function toast(m){S.toast=m;render();clearTimeout(toastT);toastT=setTimeout(()=>{S.toast=null;render();},1800);}
@@ -256,11 +256,18 @@ async function login(){const p=new GoogleAuthProvider();try{await signInWithPopu
 async function logout(){S.unsub.forEach(u=>u());S.unsub=[];await signOut(auth);}
 
 // ── Routine logic ──
-function rDateObj(){const d=new Date();d.setDate(d.getDate()+S.rDate);return d;}
-function rDateDi(){return DAY_MAP[rDateObj().getDay()];}
-function viewTasks(){return S.tasks.filter(t=>t.days.includes(rDateDi()));}
-function isComp(id){return !!S.comps[`${fmtD(rDateObj())}:${id}`];}
-function toggleComp(id){const k=`${fmtD(rDateObj())}:${id}`;if(S.comps[k])delete S.comps[k];else S.comps[k]=Date.now();saveC();render();}
+function todayTasks(){return S.tasks.filter(t=>t.days.includes(tdi()));}
+function yesterdayDate(){const d=new Date();d.setDate(d.getDate()-1);return d;}
+function yesterdayCarryover(){
+  const yd=yesterdayDate(),ydi=DAY_MAP[yd.getDay()],yds=fmtD(yd);
+  const todayIds=new Set(todayTasks().map(t=>t.id));
+  return S.tasks.filter(t=>t.days.includes(ydi)&&!S.comps[`${yds}:${t.id}`]&&!todayIds.has(t.id));
+}
+function viewTasks(){return [...todayTasks(),...yesterdayCarryover()];}
+function isCarryover(id){return yesterdayCarryover().some(t=>t.id===id);}
+function compDateFor(id){return isCarryover(id)?fmtD(yesterdayDate()):fmtD(new Date());}
+function isComp(id){return !!S.comps[`${compDateFor(id)}:${id}`];}
+function toggleComp(id){const k=`${compDateFor(id)}:${id}`;if(S.comps[k])delete S.comps[k];else S.comps[k]=Date.now();saveC();render();}
 function getStreak(t){let s=0;const d=new Date();if(t.days.includes(DAY_MAP[d.getDay()])&&S.comps[`${fmtD(d)}:${t.id}`])s=1;d.setDate(d.getDate()-1);for(let i=0;i<365;i++){if(t.days.includes(DAY_MAP[d.getDay()])){if(S.comps[`${fmtD(d)}:${t.id}`])s++;else break;}d.setDate(d.getDate()-1);}return s;}
 function rPct(){const t=viewTasks();return t.length?Math.round(t.filter(x=>isComp(x.id)).length/t.length*100):0;}
 
@@ -293,11 +300,10 @@ function renderBTabs(){return `<div class="btabs"><button class="btab ${S.tab===
 function renderRHome(){
   const tasks=viewTasks(),p=rPct(),done=tasks.filter(t=>isComp(t.id)).length,c=2*Math.PI*46;
   const sorted=[...tasks].sort((a,b)=>(isComp(a.id)?1:0)-(isComp(b.id)?1:0));
-  const isYesterday=S.rDate===-1;
   return `<div class="app-inner">
-    <div class="header"><div><div class="date-label">${dlabel()}${isYesterday?' <span style="font-size:10px;color:var(--accent);font-weight:700">昨日</span>':''}</div><div class="greeting">${isYesterday?'昨日のタスク':greet()}</div></div><div style="display:flex;gap:6px">${isYesterday?`<button class="hbtn" data-a="rToday" title="今日に戻る" style="color:var(--accent);border-color:rgba(232,168,66,.3)">→</button>`:`<button class="hbtn" data-a="rYesterday" title="昨日を見る">◀</button>`}<button class="hbtn" data-a="week" title="週間スケジュール">📅</button><button class="hbtn" data-a="logout" title="ログアウト">↗</button></div></div>
+    <div class="header"><div><div class="date-label">${dlabel()}</div><div class="greeting">${greet()}</div></div><div style="display:flex;gap:6px"><button class="hbtn" data-a="week" title="週間スケジュール">📅</button><button class="hbtn" data-a="logout" title="ログアウト">↗</button></div></div>
     <div class="pw"><div class="rc"><svg viewBox="0 0 104 104"><defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#E8A842"/><stop offset="100%" stop-color="#D4793A"/></linearGradient></defs><circle cx="52" cy="52" r="46" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/><circle cx="52" cy="52" r="46" fill="none" stroke="url(#rg)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(p/100)*c} ${c}" transform="rotate(-90 52 52)" style="transition:stroke-dasharray .7s cubic-bezier(.4,0,.2,1)"/></svg><div class="rt"><div class="rp">${p}%</div><div class="rs">${done}/${tasks.length}</div></div></div></div>
-    ${tasks.length===0?`<div class="empty"><div class="ei">🌱</div><div class="et">ルーティンを始めましょう</div><div class="ed">＋ボタンからタスクを追加</div></div>`:`<div class="tl">${sorted.map((t,i)=>{const d=isComp(t.id),sk=getStreak(t);return`<div class="tc ${d?'done':''}" style="animation-delay:${i*.04}s;${S.pop===t.id?'z-index:20':''}"><button class="cb ${d?'ck':''}" data-a="toggle" data-id="${t.id}">${d?'✓':''}</button><div class="tb" data-a="toggle" data-id="${t.id}"><div class="tn">${t.icon} ${esc(t.name)}</div>${sk>0?`<div class="st">🔥 ${sk}回連続</div>`:''}${t.days.length<7?`<div class="td">${dlStr(t.days)}</div>`:''}</div><button class="mb" data-a="more" data-id="${t.id}">⋯</button>${S.pop===t.id?`<div class="po"><button class="pb edt" data-a="edit" data-id="${t.id}">✏️ 編集</button><button class="pb del" data-a="delete" data-id="${t.id}">🗑 削除</button></div>`:''}</div>`;}).join('')}</div>`}
+    ${tasks.length===0?`<div class="empty"><div class="ei">🌱</div><div class="et">ルーティンを始めましょう</div><div class="ed">＋ボタンからタスクを追加</div></div>`:`<div class="tl">${sorted.map((t,i)=>{const d=isComp(t.id),sk=getStreak(t),co=isCarryover(t.id);return`<div class="tc ${d?'done':''}" style="animation-delay:${i*.04}s;${S.pop===t.id?'z-index:20':''}"><button class="cb ${d?'ck':''}" data-a="toggle" data-id="${t.id}">${d?'✓':''}</button><div class="tb" data-a="toggle" data-id="${t.id}"><div class="tn">${t.icon} ${esc(t.name)}${co?' <span style="font-size:10px;color:var(--accent);font-weight:700;background:var(--aglow);padding:1px 6px;border-radius:4px">昨日</span>':''}</div>${sk>0?`<div class="st">🔥 ${sk}回連続</div>`:''}${t.days.length<7&&!co?`<div class="td">${dlStr(t.days)}</div>`:''}</div><button class="mb" data-a="more" data-id="${t.id}">⋯</button>${S.pop===t.id?`<div class="po"><button class="pb edt" data-a="edit" data-id="${t.id}">✏️ 編集</button><button class="pb del" data-a="delete" data-id="${t.id}">🗑 削除</button></div>`:''}</div>`;}).join('')}</div>`}
   </div><button class="fab" data-a="add">＋</button>${S.pop?'<div class="bd" data-a="closepop"></div>':''}`;
 }
 
@@ -474,7 +480,7 @@ function handleA(e){
   switch(a){
     case 'login':login();break;
     case 'logout':logout();break;
-    case 'switchTab':S.tab=v;S.rView='home';S.rDate=0;S.pop=null;render();break;
+    case 'switchTab':S.tab=v;S.rView='home';S.pop=null;render();break;
     // Routine
     case 'toggle':toggleComp(id);break;
     case 'more':e.stopPropagation();S.pop=S.pop===id?null:id;render();break;
@@ -484,8 +490,6 @@ function handleA(e){
     case 'add':S.form={name:'',days:[0,1,2,3,4,5,6],icon:'✅'};S.rView='add';render();break;
     case 'week':S.rView='week';S.pop=null;render();break;
     case 'weekBack':S.rView='home';render();break;
-    case 'rYesterday':S.rDate=-1;S.pop=null;render();break;
-    case 'rToday':S.rDate=0;S.pop=null;render();break;
     case 'cancel':S.rView='home';S.editId=null;render();break;
     case 'save':
       if(!S.form.name.trim()||!S.form.days.length)return;

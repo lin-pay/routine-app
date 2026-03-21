@@ -194,6 +194,7 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .fit-wpend{color:#6b6b80}
 .fit-rb{width:100%;padding:12px 0;margin-top:8px;background:#1a3a28;border:1px solid rgba(74,222,128,.25);border-radius:8px;color:#4ade80;font-size:12px;font-weight:600;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:background .2s}
 .fit-rb:active{background:#1a4a30}
+.fit-report-body{background:#14141f;border-radius:8px;border:1px solid #1e1e30;padding:16px;font-size:12px;line-height:1.7;color:#a8a8b8;overflow-x:auto}
 </style>
 </head>
 <body>
@@ -213,7 +214,7 @@ const SCHEDULE={1:{type:'workout',label:'筋トレA（スクワット）',w:'A'}
 const WORKOUTS={
   A:[{id:'squat',name:'バックスクワット',sets:3,reps:'6-8'},{id:'bss',name:'ブルガリアンスプリットスクワット',sets:3,reps:'8-10'},{id:'pullupA',name:'懸垂',sets:3,reps:'限界',bw:true},{id:'core',name:'アブローラー',sets:3,reps:'—',bw:true}],
   B:[{id:'bench',name:'ベンチプレス',sets:3,reps:'6-8'},{id:'ohp',name:'OHP',sets:3,reps:'8-10'},{id:'pullupB',name:'懸垂',sets:3,reps:'限界',bw:true},{id:'dbrow',name:'ダンベルロウ',sets:3,reps:'8-10'}],
-  C:[{id:'deadlift',name:'デッドリフト',sets:3,reps:'5-6'},{id:'rdl',name:'RDL',sets:3,reps:'8-10'},{id:'pullupC',name:'懸垂',sets:3,reps:'限界',bw:true},{id:'farmwalk',name:'ファーマーズウォーク',sets:3,reps:'30-40m'}]
+  C:[{id:'deadlift',name:'デッドリフト',sets:3,reps:'5-6'},{id:'rdl',name:'RDL',sets:3,reps:'8-10'},{id:'pullupC',name:'懸垂',sets:3,reps:'限界',bw:true},{id:'hanglegraise',name:'ハンギングレッグレイズ',sets:3,reps:'10-15',bw:true}]
 };
 const DN=['日','月','火','水','木','金','土'];
 
@@ -222,7 +223,7 @@ let S={user:null,authOk:false,dataOk:false,
   // routine
   tasks:[],comps:{},rView:'home',editId:null,pop:null,form:{name:'',days:[0,1,2,3,4,5,6],icon:'✅'},
   // fitness
-  fit:{workouts:{},runs:{},weight:{},meals:{}},fDate:fmtD(new Date()),fTab:'log',
+  fit:{workouts:{},runs:{},weight:{},meals:{}},fDate:fmtD(new Date()),fTab:'log',reports:[],reportIdx:0,
   // global
   tab:'routine',toast:null,unsub:[]};
 let toastT;
@@ -243,6 +244,7 @@ function startSync(uid){
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','tasks'),s=>{if(s.exists())S.tasks=s.data().items||[];S.dataOk=true;render();}));
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','completions'),s=>{if(s.exists())S.comps=s.data().entries||{};render();}));
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','fitness'),s=>{if(s.exists()){const d=s.data();S.fit={workouts:d.workouts||{},runs:d.runs||{},weight:d.weight||{},meals:d.meals||{}};}render();}));
+  S.unsub.push(onSnapshot(doc(db,'users',uid,'data','reports'),s=>{if(s.exists()){S.reports=s.data().items||[];}render();}));
 }
 async function saveR(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','tasks'),{items:S.tasks});}catch(e){}}
 async function saveC(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','completions'),{entries:S.comps});}catch(e){}}
@@ -330,8 +332,8 @@ function renderFitness(){
   return `<div class="app-inner fit-wrap">
     <div class="fit-header"><div class="fit-title">FITNESS TRACKER</div><div class="fit-subtitle">173cm / 65kg / HRmax 198 / VO₂max 50</div><button class="hbtn" style="position:absolute;right:0;top:20px" data-a="logout">↗</button></div>
     <div class="fit-dn"><button class="fit-dnb" data-a="dPrev">◀</button><div class="fit-dnc"><div class="fit-dnd">${sel.getMonth()+1}/${sel.getDate()}（${DN[dow]}）${isToday?'<span class="fit-today">TODAY</span>':''}</div><div class="fit-dns">${sch.label}</div></div><button class="fit-dnb" data-a="dNext">▶</button></div>
-    <div class="fit-tabs"><button class="fit-tab ${S.fTab==='log'?'active':''}" data-a="fTab" data-v="log">記録</button><button class="fit-tab ${S.fTab==='summary'?'active':''}" data-a="fTab" data-v="summary">週次</button><button class="fit-tab" data-a="fToday" style="${isToday?'opacity:.3':''}">今日</button></div>
-    ${S.fTab==='log'?renderFLog(sch):renderFSummary()}
+    <div class="fit-tabs"><button class="fit-tab ${S.fTab==='log'?'active':''}" data-a="fTab" data-v="log">記録</button><button class="fit-tab ${S.fTab==='summary'?'active':''}" data-a="fTab" data-v="summary">週次</button><button class="fit-tab ${S.fTab==='report'?'active':''}" data-a="fTab" data-v="report">アドバイス${S.reports.length?'<span style="margin-left:4px;font-size:9px;background:#4ade80;color:#0a0a0f;padding:1px 5px;border-radius:3px;font-weight:700">'+S.reports.length+'</span>':''}</button><button class="fit-tab" data-a="fToday" style="${isToday?'opacity:.3':''}">今日</button></div>
+    ${S.fTab==='report'?renderFReport():S.fTab==='log'?renderFLog(sch):renderFSummary()}
   </div>`;
 }
 
@@ -429,9 +431,31 @@ function renderFSummary(){
   }
   html+=`</div>`;
 
-  html+=`<button class="fit-rb" data-a="fReport">Claudeに週次レポートを送信</button>`;
   html+=`</div>`;
   return html;
+}
+
+function renderFReport(){
+  if(!S.reports.length)return `<div class="fit-section"><div class="fit-rest"><span style="font-size:36px;display:block;margin-bottom:8px">🏋️</span><div class="fit-rest-t">トレーナーアドバイスはまだありません</div><div class="fit-rest-s">毎週金曜8:00に自動生成されます</div></div></div>`;
+  const r=S.reports[S.reportIdx]||S.reports[0];
+  let html=`<div class="fit-section">`;
+  if(S.reports.length>1)html+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><button class="fit-dnb" data-a="rPrev" ${S.reportIdx>=S.reports.length-1?'style="opacity:.3"':''}>◀</button><span style="font-size:12px;color:#6b6b80">${r.date}（${S.reportIdx+1}/${S.reports.length}）</span><button class="fit-dnb" data-a="rNext" ${S.reportIdx<=0?'style="opacity:.3"':''}>▶</button></div>`;
+  else html+=`<div style="text-align:center;margin-bottom:12px;font-size:12px;color:#6b6b80">${r.date}</div>`;
+  html+=`<div class="fit-report-body">${mdToHtml(r.content)}</div></div>`;
+  return html;
+}
+function mdToHtml(md){
+  return md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^### (.+)$/gm,'<div style="font-size:13px;font-weight:700;color:#4ade80;margin:16px 0 6px">$1</div>')
+    .replace(/^## (.+)$/gm,'<div style="font-size:14px;font-weight:700;color:#e8e8f0;margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid #1e1e30">$1</div>')
+    .replace(/^# (.+)$/gm,'<div style="font-size:15px;font-weight:700;color:#4ade80;margin:16px 0 10px">$1</div>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong style="color:#e8e8f0">$1</strong>')
+    .replace(/^\| (.+)$/gm,r=>{const cells=r.split('|').filter(c=>c.trim());if(cells.every(c=>/^[\s-:]+$/.test(c)))return '';return '<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid #1e1e30;font-size:11px">'+cells.map(c=>'<span style="flex:1">'+c.trim()+'</span>').join('')+'</div>';})
+    .replace(/^- (.+)$/gm,'<div style="padding:2px 0 2px 12px;font-size:12px;position:relative"><span style="position:absolute;left:0;color:#4ade80">•</span>$1</div>')
+    .replace(/^&gt; (.+)$/gm,'<div style="border-left:2px solid #4ade80;padding:6px 12px;margin:8px 0;font-size:12px;color:#6b6b80;font-style:italic">$1</div>')
+    .replace(/---/g,'<div style="border-top:1px solid #1e1e30;margin:12px 0"></div>')
+    .replace(/\n\n/g,'<div style="height:8px"></div>')
+    .replace(/\n/g,'<br>');
 }
 
 // ── Events ──
@@ -475,45 +499,9 @@ function handleA(e){
     case 'fRun':{const f=el.dataset.f;if(!S.fit.runs[S.fDate])S.fit.runs[S.fDate]={};S.fit.runs[S.fDate][f]=el.value;saveF();if(f==='distance'||f==='duration'){const r=S.fit.runs[S.fDate],dist=parseFloat(r.distance)||0,dur=parseFloat(r.duration)||0;let pace='—';if(dist>0&&dur>0){const pt=dur/dist;pace=`${Math.floor(pt)}:${String(Math.round((pt-Math.floor(pt))*60)).padStart(2,'0')}`;}const pe=document.querySelector('.fit-pace');if(pe)pe.textContent=pace;}}break;
     case 'fMeal':S.fit.meals[S.fDate]=el.value;saveF();break;
     case 'fToday':S.fDate=fmtD(new Date());render();break;
-    case 'fReport':sendReport();break;
+    case 'rPrev':if(S.reportIdx<S.reports.length-1){S.reportIdx++;render();}break;
+    case 'rNext':if(S.reportIdx>0){S.reportIdx--;render();}break;
   }
-}
-function sendReport(){
-  const sel=parseD(S.fDate),day=sel.getDay(),diff=day===0?6:day-1;
-  const ws=new Date(sel);ws.setDate(ws.getDate()-diff);
-  const we=new Date(ws);we.setDate(we.getDate()+6);
-  const lines=[`【週次レポート】${ws.getMonth()+1}/${ws.getDate()}〜${we.getMonth()+1}/${we.getDate()}`];
-  let wkC=0,rnC=0,totD=0;const weights=[];
-  const allEx=[...WORKOUTS.A,...WORKOUTS.B,...WORKOUTS.C];
-  const exMap={};const bwMap={};allEx.forEach(e=>{exMap[e.id]=e.name;if(e.bw)bwMap[e.id]=true;});
-  const prs={},bwPrs={};
-  for(let i=0;i<7;i++){
-    const d=new Date(ws);d.setDate(d.getDate()+i);const ds=fmtD(d),dow=d.getDay(),sch=SCHEDULE[dow];
-    if(S.fit.weight[ds])weights.push(parseFloat(S.fit.weight[ds]));
-    if(sch.type==='workout'&&S.fit.workouts[ds]){wkC++;Object.entries(S.fit.workouts[ds]).forEach(([exId,data])=>{
-      if(bwMap[exId]){for(let s=1;s<=3;s++){const r=parseFloat(data[`s${s}r`]);if(r&&(!bwPrs[exId]||r>bwPrs[exId]))bwPrs[exId]=r;}}
-      else{for(let s=1;s<=3;s++){const wt=parseFloat(data[`s${s}w`]);if(wt&&(!prs[exId]||wt>prs[exId]))prs[exId]=wt;}}
-    });}
-    if(sch.type==='run'&&S.fit.runs[ds]&&S.fit.runs[ds].distance){rnC++;totD+=parseFloat(S.fit.runs[ds].distance)||0;}
-  }
-  lines.push(`筋トレ: ${wkC}回 / ラン: ${rnC}回 / 走行: ${totD.toFixed(1)}km`);
-  const avgW=weights.length?Math.round(weights.reduce((a,b)=>a+b,0)/weights.length*10)/10:null;
-  if(avgW)lines.push(`平均体重: ${avgW}kg`);
-  if(Object.keys(prs).length>0||Object.keys(bwPrs).length>0){
-    lines.push('ベスト:');
-    Object.entries(prs).forEach(([id,w])=>lines.push(`  ${exMap[id]}: ${w}kg`));
-    Object.entries(bwPrs).forEach(([id,r])=>lines.push(`  ${exMap[id]}: ${r}回`));
-  }
-  for(let i=0;i<7;i++){
-    const d=new Date(ws);d.setDate(d.getDate()+i);const ds=fmtD(d);
-    if(S.fit.runs[ds]&&S.fit.runs[ds].distance){
-      const r=S.fit.runs[ds],dist=parseFloat(r.distance)||0,dur=parseFloat(r.duration)||0;
-      let pace='—';if(dist>0&&dur>0){const pt=dur/dist;pace=`${Math.floor(pt)}:${String(Math.round((pt-Math.floor(pt))*60)).padStart(2,'0')}`;}
-      lines.push(`ラン(${ds}): ${r.distance}km ${pace}/km HR${r.hr||'—'} ${r.duration||'—'}min`);
-    }
-  }
-  if(typeof sendPrompt==='function'){sendPrompt('週次レポートです:\n'+lines.join('\n'));}
-  else{navigator.clipboard.writeText(lines.join('\n')).then(()=>toast('レポートをコピーしました'));}
 }
 render();
 </script>

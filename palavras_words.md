@@ -1,0 +1,23 @@
+# Palavras - 単語リスト
+reciclagem
+povo
+culinária
+sotaques
+dezena
+retrato
+miscigenada
+palco
+falantes
+precedentes
+negreiro
+lavouras
+levas
+entrelaçaram
+miscigenação
+fio
+atraídos
+tapeçaria
+entrelaça
+viés
+Apesar
+ribeirinhas

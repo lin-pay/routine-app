@@ -50,16 +50,12 @@
 - **デザイン**: ダークテーマ、グリーンアクセント（ブラジルカラー）
 
 ## 今回やったこと
-- 筋トレCのファーマーズウォーク → ハンギングレッグレイズに変更（スペース不要の種目へ）
-- トレーナーアドバイス自動生成機能を追加
-  - `fitness-report.mjs`: Firebase Admin SDK でFirestoreからデータ取得 → Claude CLI でレポート生成 → Firestoreに保存
-  - アプリに「アドバイス」タブを追加（過去レポート閲覧、前後ナビゲーション付き）
-  - systemd user timer で毎週金曜8:00自動実行（`Persistent=true` でVM停止時キャッチアップ対応）
-  - `loginctl enable-linger` で再起動後もタイマー自動起動
-- `.gitignore` 追加（サービスアカウントキー、node_modules、reports を除外）
+- CADERNO VIRTUAL（ポルトガル語授業ノート）全14ドキュメントから単語を抽出
+- import.htmlに既存1344語に加えて新規788語を追加（合計2132語）
+- ソース: Google Docs "RINPEI NAGAOKA - CADERNO VIRTUAL" シリーズ（Chromeブックマーク・履歴 + デスクトップClaude経由でURL取得）
 
 ## 未完了・次にやること
-- 特になし（仕様変更・機能追加があれば随時対応）
+- 特になし
 
 ## 重要な設計判断・注意点
 - git config (user.name, user.email) はリポジトリローカルに設定（グローバル未変更）

@@ -347,7 +347,7 @@ function bind(){
 }
 function updBtn(){const b=document.querySelector('[data-a="save"]');if(b)b.disabled=!(S.form.pt.trim()&&S.form.ja.trim());}
 
-async function handleA(e){
+function handleA(e){
   const el=e.currentTarget,a=el.dataset.a,id=el.dataset.id,v=el.dataset.v;
   switch(a){
     case 'login':login();break;
@@ -369,7 +369,7 @@ async function handleA(e){
         S.rcounts[r]++;saveRC();
         if(entry.rev){const src={ef:card.rEf||2.5,interval:card.rInterval||0,reps:card.rReps||0};const upd=sm2(src,r);card.rEf=upd.ef;card.rInterval=upd.interval;card.rReps=upd.reps;card.rNextReview=upd.nextReview;}
         else{const upd=sm2(card,r);Object.assign(card,upd);if(r>=2&&!card.rNextReview){const d=new Date();d.setDate(d.getDate()+1);card.rNextReview=fmtD(d);}}
-        await save();}
+        save();}
       S.idx++;S.flipped=false;render();
     }break;
     case 'list':S.view='list';S.search='';S.pop=null;render();break;
@@ -397,7 +397,7 @@ async function handleA(e){
       const card=S.cards.find(c=>c.id===entry.id);
       if(card)Object.assign(card,lr.snap);
       S.rcounts[lr.rating]--;saveRC();
-      S.idx=lr.idx;S.flipped=false;S.lastRating=null;await save();render();
+      S.idx=lr.idx;S.flipped=false;S.lastRating=null;save();render();
     }break;
     case 'cancel':S.view=S.editId?'list':'home';S.editId=null;render();break;
   }

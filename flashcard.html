@@ -194,7 +194,8 @@ function startSync(uid){
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','flashcards'),s=>{
     if(saving)return;
     if(s.exists())S.cards=s.data().cards||[];
-    S.dataOk=true;render();
+    S.dataOk=true;
+    if(S.view!=='review')render();
   }));
 }
 async function save(){if(!S.user)return;saving=true;try{await setDoc(doc(db,'users',S.user.uid,'data','flashcards'),{cards:S.cards});}catch(e){toast('⚠ 保存失敗 — ネット接続を確認');}finally{saving=false;}}

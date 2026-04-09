@@ -195,6 +195,16 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .fit-rb{width:100%;padding:12px 0;margin-top:8px;background:#1a3a28;border:1px solid rgba(74,222,128,.25);border-radius:8px;color:#4ade80;font-size:12px;font-weight:600;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:background .2s}
 .fit-rb:active{background:#1a4a30}
 .fit-report-body{background:#14141f;border-radius:8px;border:1px solid #1e1e30;padding:16px;font-size:12px;line-height:1.7;color:#a8a8b8;overflow-x:auto}
+.fit-tr-card{background:#14141f;border-radius:8px;border:1px solid #1e1e30;padding:12px 14px;margin-bottom:8px}
+.fit-tr-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;gap:8px}
+.fit-tr-name{font-size:12px;font-weight:600;color:#e8e8f0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fit-tr-val{font-size:16px;font-weight:700;color:#4ade80;font-family:'JetBrains Mono',monospace;flex-shrink:0}
+.fit-tr-unit{font-size:10px;color:#6b6b80;margin-left:3px;font-weight:500}
+.fit-tr-svg{width:100%;height:48px;display:block;margin:4px 0;overflow:visible}
+.fit-tr-meta{display:flex;justify-content:space-between;font-size:10px;color:#6b6b80;margin-top:4px;gap:8px}
+.fit-tr-up{color:#4ade80}
+.fit-tr-dn{color:#f87171}
+.fit-tab{font-size:11px;letter-spacing:.5px}
 </style>
 </head>
 <body>
@@ -351,8 +361,8 @@ function renderFitness(){
   return `<div class="app-inner fit-wrap">
     <div class="fit-header"><div class="fit-title">FITNESS TRACKER</div><div class="fit-subtitle">173cm / 65kg / HRmax 198 / VO₂max 50</div><button class="hbtn" style="position:absolute;right:0;top:20px" data-a="logout">↗</button></div>
     <div class="fit-dn"><button class="fit-dnb" data-a="dPrev">◀</button><div class="fit-dnc"><div class="fit-dnd">${sel.getMonth()+1}/${sel.getDate()}（${DN[dow]}）${isToday?'<span class="fit-today">TODAY</span>':''}</div><div class="fit-dns">${sch.label}</div></div><button class="fit-dnb" data-a="dNext">▶</button></div>
-    <div class="fit-tabs"><button class="fit-tab ${S.fTab==='log'?'active':''}" data-a="fTab" data-v="log">記録</button><button class="fit-tab ${S.fTab==='summary'?'active':''}" data-a="fTab" data-v="summary">週次</button><button class="fit-tab ${S.fTab==='report'?'active':''}" data-a="fTab" data-v="report">アドバイス${S.reports.length?'<span style="margin-left:4px;font-size:9px;background:#4ade80;color:#0a0a0f;padding:1px 5px;border-radius:3px;font-weight:700">'+S.reports.length+'</span>':''}</button><button class="fit-tab" data-a="fToday" style="${isToday?'opacity:.3':''}">今日</button></div>
-    ${S.fTab==='report'?renderFReport():S.fTab==='log'?renderFLog(sch):renderFSummary()}
+    <div class="fit-tabs"><button class="fit-tab ${S.fTab==='log'?'active':''}" data-a="fTab" data-v="log">記録</button><button class="fit-tab ${S.fTab==='summary'?'active':''}" data-a="fTab" data-v="summary">週次</button><button class="fit-tab ${S.fTab==='trend'?'active':''}" data-a="fTab" data-v="trend">推移</button><button class="fit-tab ${S.fTab==='report'?'active':''}" data-a="fTab" data-v="report">助言${S.reports.length?'<span style="margin-left:3px;font-size:9px;background:#4ade80;color:#0a0a0f;padding:1px 4px;border-radius:3px;font-weight:700">'+S.reports.length+'</span>':''}</button><button class="fit-tab" data-a="fToday" style="${isToday?'opacity:.3':''}">今日</button></div>
+    ${S.fTab==='report'?renderFReport():S.fTab==='trend'?renderFTrend():S.fTab==='log'?renderFLog(sch):renderFSummary()}
   </div>`;
 }
 
@@ -462,6 +472,85 @@ function renderFReport(){
   else html+=`<div style="text-align:center;margin-bottom:12px;font-size:12px;color:#6b6b80">${r.date}</div>`;
   html+=`<div class="fit-report-body">${mdToHtml(r.content)}</div></div>`;
   return html;
+}
+function renderFTrend(){
+  const allEx=[...WORKOUTS.A,...WORKOUTS.B,...WORKOUTS.C];
+  // Merge by name (pullupA/B/C → 懸垂)
+  const byName={};
+  allEx.forEach(ex=>{if(!byName[ex.name])byName[ex.name]={bw:!!ex.bw,sets:ex.sets,points:[]};});
+  Object.keys(S.fit.workouts).sort().forEach(ds=>{
+    const w=S.fit.workouts[ds];
+    allEx.forEach(ex=>{
+      if(w[ex.id]){
+        const data=w[ex.id],target=byName[ex.name],key=ex.bw?'r':'w';
+        let mv=0;
+        for(let s=1;s<=ex.sets;s++){const v=parseFloat(data[`s${s}${key}`]);if(v>mv)mv=v;}
+        if(mv>0)target.points.push({date:ds,val:mv});
+      }
+    });
+  });
+  // Body weight
+  const wPoints=Object.keys(S.fit.weight).filter(d=>S.fit.weight[d]).sort().map(d=>({date:d,val:parseFloat(S.fit.weight[d])})).filter(p=>!isNaN(p.val));
+  // Run data
+  const runDates=Object.keys(S.fit.runs).filter(d=>S.fit.runs[d]&&S.fit.runs[d].distance).sort();
+  const runDist=runDates.map(d=>({date:d,val:parseFloat(S.fit.runs[d].distance)||0})).filter(p=>p.val>0);
+  const runPace=runDates.map(d=>{const r=S.fit.runs[d],dist=parseFloat(r.distance)||0,dur=parseFloat(r.duration)||0;return dist>0&&dur>0?{date:d,val:dur/dist}:null;}).filter(Boolean);
+  const runHr=runDates.map(d=>{const hr=parseFloat(S.fit.runs[d].hr)||0;return hr>0?{date:d,val:hr}:null;}).filter(Boolean);
+
+  let html=`<div class="fit-section"><div class="fit-sh"><span class="fit-sh-icon">📈</span><span>記録の推移</span></div>`;
+  let cards='';
+  cards+=trendCard('体重',wPoints,'kg',{lowerBetter:true});
+  // Strength (non-bw) in WORKOUTS order
+  const seen={};
+  allEx.forEach(ex=>{if(!ex.bw&&!seen[ex.name]){seen[ex.name]=1;const d=byName[ex.name];if(d.points.length)cards+=trendCard(ex.name,d.points,'kg');}});
+  // BW exercises
+  allEx.forEach(ex=>{if(ex.bw&&!seen[ex.name]){seen[ex.name]=1;const d=byName[ex.name];if(d.points.length)cards+=trendCard(ex.name,d.points,'回');}});
+  cards+=trendCard('ラン距離',runDist,'km');
+  cards+=trendCard('ランペース',runPace,'/km',{paceFmt:true,lowerBetter:true});
+  cards+=trendCard('平均心拍',runHr,'bpm',{lowerBetter:true});
+
+  if(!cards.trim())html+=`<div class="fit-rest"><span style="font-size:36px;display:block;margin-bottom:8px">📊</span><div class="fit-rest-t">記録がまだありません</div><div class="fit-rest-s">記録タブから入力すると推移が表示されます</div></div>`;
+  else html+=cards;
+  html+=`</div>`;
+  return html;
+}
+function trendCard(name,points,unit,opts){
+  if(!points||!points.length)return '';
+  opts=opts||{};
+  const last=points[points.length-1],first=points[0];
+  const vals=points.map(p=>p.val);
+  const max=Math.max(...vals),min=Math.min(...vals),range=max-min||Math.max(max*0.1,1);
+  const W=300,H=48,P=4;
+  const xStep=points.length>1?(W-P*2)/(points.length-1):0;
+  const coord=(p,i)=>{const x=P+i*xStep;const y=H-P-((p.val-min)/range)*(H-P*2);return [x,y];};
+  let path='';
+  points.forEach((p,i)=>{const[x,y]=coord(p,i);path+=`${i===0?'M':'L'}${x.toFixed(1)},${y.toFixed(1)} `;});
+  // Area fill path
+  let area='';
+  if(points.length>1){
+    area=path+`L${(P+(points.length-1)*xStep).toFixed(1)},${H-P} L${P},${H-P} Z`;
+  }
+  let dots='';
+  points.forEach((p,i)=>{const[x,y]=coord(p,i);dots+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="#4ade80"/>`;});
+  const fmt=v=>opts.paceFmt?`${Math.floor(v)}:${String(Math.round((v-Math.floor(v))*60)).padStart(2,'0')}`:(Math.round(v*10)/10);
+  const delta=points.length>1?last.val-first.val:0;
+  let deltaCls='',deltaStr='—';
+  if(points.length>1&&delta!==0){
+    const isImprove=opts.lowerBetter?delta<0:delta>0;
+    deltaCls=isImprove?'fit-tr-up':'fit-tr-dn';
+    const arrow=delta>0?'▲':'▼';
+    const absD=Math.abs(delta);
+    deltaStr=`${arrow} ${opts.paceFmt?fmt(absD):(Math.round(absD*10)/10)}${opts.paceFmt?'':unit}`;
+  }
+  return `<div class="fit-tr-card">
+    <div class="fit-tr-head"><div class="fit-tr-name">${esc(name)}</div><div class="fit-tr-val">${fmt(last.val)}<span class="fit-tr-unit">${unit}</span></div></div>
+    <svg class="fit-tr-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      ${area?`<path d="${area}" fill="rgba(74,222,128,0.08)"/>`:''}
+      <path d="${path}" fill="none" stroke="#4ade80" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}
+    </svg>
+    <div class="fit-tr-meta"><span>${points.length}回</span><span class="${deltaCls}">${deltaStr}</span><span>${first.date.slice(5)} → ${last.date.slice(5)}</span></div>
+  </div>`;
 }
 function mdToHtml(md){
   return md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')

@@ -28,9 +28,12 @@
 - ラン: 距離・時間・心拍・ペース（自動計算）・メモ
 - 体重・食事メモ
 - 週次サマリー（4カラムグリッド、最大重量、日別ログ）
+- 推移タブ: 体重・各種目の最大重量（懸垂はA/B/C統合）・ラン距離/ペース/平均心拍をスパークラインで表示。改善方向（重量↑/ペース↓など）を緑、悪化方向を赤で表示
 - トレーナーアドバイス（「アドバイス」タブ）: 毎週金曜8:00に自動生成、Firestore保存（直近12件）
   - 生成スクリプト: `fitness-report.mjs`（Firebase Admin SDK + Claude CLI）
-  - systemd user timer (`fitness-report.timer`) で自動実行、`Persistent=true` でVM停止時もキャッチアップ
+  - Mac LaunchAgent (`com.routine-app.fitness-report`) で自動実行（毎週金曜 19:40 JST）— crontabから移行済み(2026-04-07)
+  - ログ: `reports/cron.log`
+  - launchdはスリープ中のmissed jobを起床時に自動実行する（cronのPersistent相当）
   - サービスアカウントキー: `routine-app-5eff3-firebase-adminsdk-*.json`（.gitignoreで除外）
 
 #### その他ファイル
@@ -50,9 +53,14 @@
 - **デザイン**: ダークテーマ、グリーンアクセント（ブラジルカラー）
 
 ## 今回やったこと
-- CADERNO VIRTUAL（ポルトガル語授業ノート）全14ドキュメントから単語を抽出
-- import.htmlに既存1344語に加えて新規788語を追加（合計2132語）
-- ソース: Google Docs "RINPEI NAGAOKA - CADERNO VIRTUAL" シリーズ（Chromeブックマーク・履歴 + デスクトップClaude経由でURL取得）
+- フィットネスタブに「推移」タブを追加（記録/週次/推移/助言/今日 の5タブ構成）
+  - 体重・各筋トレ種目の最大重量・ラン距離/ペース/平均心拍をスパークライン（インラインSVG）で表示
+  - 懸垂はpullupA/B/C（曜日別ID）を「懸垂」名で統合
+  - 各カードに最新値・回数・期間・初回比較デルタ（改善=緑/悪化=赤、ペース・心拍・体重は低い方が改善扱い）
+  - 「アドバイス」ラベルを「助言」に短縮（5タブ収納のため）、tabのfont-sizeを11pxに縮小
+- ルーティンタブに日付ナビゲーション（◀ 日付 ▶ ●）を追加し、過去日のタスク完了/未完了を修正可能に
+  - 過去日ではタスク追加・編集・削除・ストリーク表示を非表示にし、チェックのON/OFFのみ操作可能
+  - 未来日へは進めない制限付き
 
 ## 未完了・次にやること
 - 特になし
@@ -62,4 +70,4 @@
 - gh CLIは ~/bin/gh にインストール、~/.bashrc にPATH追加済み
 - force pushで既存リポジトリの内容を上書き済み（データはFirestoreなので影響なし）
 - Firebaseサービスアカウントキーは `.gitignore` で除外必須（秘密鍵）
-- systemd user timer 管理: `systemctl --user {status|start|stop} fitness-report.timer`
+- スケジュール管理: `launchctl list com.routine-app.fitness-report` で確認。plistは `~/Library/LaunchAgents/com.routine-app.fitness-report.plist`

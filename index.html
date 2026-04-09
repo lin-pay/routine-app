@@ -358,8 +358,10 @@ function renderWeek(){
 // ── Fitness views ──
 function renderFitness(){
   const sel=parseD(S.fDate),dow=sel.getDay(),sch=SCHEDULE[dow],isToday=S.fDate===fmtD(new Date());
+  const wDates=Object.keys(S.fit.weight).filter(d=>S.fit.weight[d]).sort();
+  const latestW=wDates.length?S.fit.weight[wDates[wDates.length-1]]:'—';
   return `<div class="app-inner fit-wrap">
-    <div class="fit-header"><div class="fit-title">FITNESS TRACKER</div><div class="fit-subtitle">173cm / 65kg / HRmax 198 / VO₂max 50</div><button class="hbtn" style="position:absolute;right:0;top:20px" data-a="logout">↗</button></div>
+    <div class="fit-header"><div class="fit-title">FITNESS TRACKER</div><div class="fit-subtitle">173cm / ${latestW}kg / HRmax 198 / VO₂max 50</div><button class="hbtn" style="position:absolute;right:0;top:20px" data-a="logout">↗</button></div>
     <div class="fit-dn"><button class="fit-dnb" data-a="dPrev">◀</button><div class="fit-dnc"><div class="fit-dnd">${sel.getMonth()+1}/${sel.getDate()}（${DN[dow]}）${isToday?'<span class="fit-today">TODAY</span>':''}</div><div class="fit-dns">${sch.label}</div></div><button class="fit-dnb" data-a="dNext">▶</button></div>
     <div class="fit-tabs"><button class="fit-tab ${S.fTab==='log'?'active':''}" data-a="fTab" data-v="log">記録</button><button class="fit-tab ${S.fTab==='summary'?'active':''}" data-a="fTab" data-v="summary">週次</button><button class="fit-tab ${S.fTab==='trend'?'active':''}" data-a="fTab" data-v="trend">推移</button><button class="fit-tab ${S.fTab==='report'?'active':''}" data-a="fTab" data-v="report">助言${S.reports.length?'<span style="margin-left:3px;font-size:9px;background:#4ade80;color:#0a0a0f;padding:1px 4px;border-radius:3px;font-weight:700">'+S.reports.length+'</span>':''}</button><button class="fit-tab" data-a="fToday" style="${isToday?'opacity:.3':''}">今日</button></div>
     ${S.fTab==='report'?renderFReport():S.fTab==='trend'?renderFTrend():S.fTab==='log'?renderFLog(sch):renderFSummary()}

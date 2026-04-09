@@ -139,7 +139,7 @@ import{getFirestore,initializeFirestore,persistentLocalCache,doc,setDoc,onSnapsh
 
 const fbApp=initializeApp({apiKey:"AIzaSyDlttoYqI42olx_khQY2MbxAgQcozD57p4",authDomain:"routine-app-5eff3.firebaseapp.com",projectId:"routine-app-5eff3",storageBucket:"routine-app-5eff3.firebasestorage.app",messagingSenderId:"282023583014",appId:"1:282023583014:web:4669d57d2ddcce7146f5e7"});
 const auth=getAuth(fbApp);
-let db;try{db=initializeFirestore(fbApp,{localCache:persistentLocalCache()});}catch(e){db=getFirestore(fbApp);}
+let db;try{db=initializeFirestore(fbApp,{localCache:persistentLocalCache(),ignoreUndefinedProperties:true});}catch(e){db=getFirestore(fbApp);}
 
 // ── State ──
 let S={
@@ -198,7 +198,7 @@ function startSync(uid){
     if(S.view!=='review')render();
   }));
 }
-async function save(){if(!S.user)return;saving=true;try{await setDoc(doc(db,'users',S.user.uid,'data','flashcards'),{cards:S.cards});}catch(e){toast('⚠ 保存失敗 — ネット接続を確認');}finally{saving=false;}}
+async function save(){if(!S.user)return;saving=true;try{await setDoc(doc(db,'users',S.user.uid,'data','flashcards'),{cards:S.cards});}catch(e){console.error('[palavras] save failed:',e);toast('⚠ 保存失敗 — ネット接続を確認');}finally{saving=false;}}
 onAuthStateChanged(auth,u=>{S.user=u;S.authOk=true;if(u)startSync(u.uid);else{S.dataOk=false;S.cards=[];render();}});
 getRedirectResult(auth).catch(()=>{});
 async function login(){const p=new GoogleAuthProvider();try{await signInWithPopup(auth,p);}catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/popup-closed-by-user')await signInWithRedirect(auth,p);}}
@@ -396,7 +396,7 @@ function handleA(e){
       const lr=S.lastRating;if(!lr)break;
       const entry=S.queue[lr.idx];
       const card=S.cards.find(c=>c.id===entry.id);
-      if(card)Object.assign(card,lr.snap);
+      if(card){for(const k in lr.snap){if(lr.snap[k]===undefined)delete card[k];else card[k]=lr.snap[k];}}
       S.rcounts[lr.rating]--;saveRC();
       S.idx=lr.idx;S.flipped=false;S.lastRating=null;save();render();
     }break;

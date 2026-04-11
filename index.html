@@ -581,7 +581,7 @@ function mdToHtml(md){
       const tag=!hdrDone?'th':'td';
       const bg=!hdrDone?'background:#1e1e30;':'';
       const clr=!hdrDone?'#6b6b80':'#c8c8d8';
-      h+='<tr>'+cells.map(c=>`<${tag} style="padding:4px 6px;border-bottom:1px solid #1e1e30;text-align:left;${bg}color:${clr}">${esc(c.trim())}</${tag}>`).join('')+'</tr>';
+      h+='<tr>'+cells.map(c=>`<${tag} style="padding:4px 6px;border-bottom:1px solid #1e1e30;text-align:left;${bg}color:${clr}">${esc(c.trim()).replace(/\*\*(.+?)\*\*/g,'<strong style="color:#e8e8f0">$1</strong>')}</${tag}>`).join('')+'</tr>';
     });
     return tok(h+'</table>');
   });

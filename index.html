@@ -568,17 +568,39 @@ function trendCard(name,points,unit,opts,minT,maxT){
   </div>`;
 }
 function mdToHtml(md){
-  return md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const ph=[];const tok=h=>{ph.push(h);return '\x00PH'+(ph.length-1)+'\x00';};
+  // テーブル→プレースホルダー
+  md=md.replace(/(^\|.+$\n?)+/gm,block=>{
+    const rows=block.trim().split('\n');
+    let h='<table style="width:100%;border-collapse:collapse;font-size:11px;margin:8px 0">';
+    let hdrDone=false;
+    rows.forEach(r=>{
+      const cells=r.split('|').filter(c=>c.trim());
+      if(cells.every(c=>/^[\s\-:]+$/.test(c))){hdrDone=true;return;}
+      const tag=!hdrDone?'th':'td';
+      const bg=!hdrDone?'background:#1e1e30;':'';
+      const clr=!hdrDone?'#6b6b80':'#c8c8d8';
+      h+='<tr>'+cells.map(c=>`<${tag} style="padding:4px 6px;border-bottom:1px solid #1e1e30;text-align:left;${bg}color:${clr}">${esc(c.trim())}</${tag}>`).join('')+'</tr>';
+    });
+    return tok(h+'</table>');
+  });
+  // コードブロック→プレースホルダー
+  md=md.replace(/```[\s\S]*?```/g,block=>{
+    const inner=block.replace(/^```\w*\n?/,'').replace(/\n?```$/,'');
+    return tok('<pre style="background:#1e1e30;padding:8px 10px;border-radius:6px;font-size:11px;overflow-x:auto;margin:8px 0;color:#c8c8d8">'+esc(inner)+'</pre>');
+  });
+  let out=esc(md)
     .replace(/^### (.+)$/gm,'<div style="font-size:13px;font-weight:700;color:#4ade80;margin:16px 0 6px">$1</div>')
     .replace(/^## (.+)$/gm,'<div style="font-size:14px;font-weight:700;color:#e8e8f0;margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid #1e1e30">$1</div>')
     .replace(/^# (.+)$/gm,'<div style="font-size:15px;font-weight:700;color:#4ade80;margin:16px 0 10px">$1</div>')
     .replace(/\*\*(.+?)\*\*/g,'<strong style="color:#e8e8f0">$1</strong>')
-    .replace(/^\| (.+)$/gm,r=>{const cells=r.split('|').filter(c=>c.trim());if(cells.every(c=>/^[\s-:]+$/.test(c)))return '';return '<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid #1e1e30;font-size:11px">'+cells.map(c=>'<span style="flex:1">'+c.trim()+'</span>').join('')+'</div>';})
     .replace(/^- (.+)$/gm,'<div style="padding:2px 0 2px 12px;font-size:12px;position:relative"><span style="position:absolute;left:0;color:#4ade80">•</span>$1</div>')
     .replace(/^&gt; (.+)$/gm,'<div style="border-left:2px solid #4ade80;padding:6px 12px;margin:8px 0;font-size:12px;color:#6b6b80;font-style:italic">$1</div>')
     .replace(/---/g,'<div style="border-top:1px solid #1e1e30;margin:12px 0"></div>')
     .replace(/\n\n/g,'<div style="height:8px"></div>')
     .replace(/\n/g,'<br>');
+  return out.replace(/\x00PH(\d+)\x00/g,(_,i)=>ph[i]);
 }
 
 // ── Events ──

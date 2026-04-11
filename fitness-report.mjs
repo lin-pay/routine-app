@@ -94,8 +94,9 @@ const reportPath = join(reportDir, `fitness-report-${dateStr}.md`);
 // プロンプトをファイル経由で渡す（シェルエスケープ問題を回避）
 writeFileSync(promptPath, prompt);
 console.log('Claude CLIでレポート生成中...');
+const claudePath = '/Users/nagaoka/.local/bin/claude';
 const report = execSync(
-  `cat "${promptPath}" | claude -p`,
+  `cat "${promptPath}" | "${claudePath}" -p`,
   { encoding: 'utf8', maxBuffer: 1024 * 1024, timeout: 180000 }
 );
 

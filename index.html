@@ -402,7 +402,7 @@ function renderFLog(sch){
     if(dist>0&&dur>0){const pt=dur/dist;autoPace=`${Math.floor(pt)}:${String(Math.round((pt-Math.floor(pt))*60)).padStart(2,'0')}`;}
     html+=`<div class="fit-section"><div class="fit-sh"><span class="fit-sh-icon">🏃</span><span>${sch.label}</span></div>
       <div class="fit-rc">
-        <div class="fit-rr"><div class="fit-rf"><label class="fit-fl">距離 (km)</label><input class="fit-iw" data-a="fRun" data-f="distance" value="${r.distance||''}" placeholder="5.0" inputmode="decimal"></div><div class="fit-rf"><label class="fit-fl">時間 (分)</label><input class="fit-iw" data-a="fRun" data-f="duration" value="${r.duration||''}" placeholder="40" inputmode="numeric"></div></div>
+        <div class="fit-rr"><div class="fit-rf"><label class="fit-fl">距離 (km)</label><input class="fit-iw" data-a="fRun" data-f="distance" value="${r.distance||''}" placeholder="5.0" inputmode="decimal"></div><div class="fit-rf"><label class="fit-fl">時間 (分)</label><input class="fit-iw" data-a="fRun" data-f="duration" value="${r.duration||''}" placeholder="40" inputmode="decimal"></div></div>
         <div class="fit-rr"><div class="fit-rf"><label class="fit-fl">平均心拍 (bpm)</label><input class="fit-iw" data-a="fRun" data-f="hr" value="${r.hr||''}" placeholder="145" inputmode="numeric"></div><div class="fit-rf"><label class="fit-fl">ペース (/km)</label><div class="fit-pace">${autoPace}</div></div></div>
         <div class="fit-rf"><label class="fit-fl">メモ</label><input class="fit-iw" data-a="fRun" data-f="note" value="${esc(r.note||'')}" placeholder="体調、天気など"></div>
       </div>

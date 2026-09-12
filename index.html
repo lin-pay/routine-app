@@ -205,6 +205,61 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .fit-tr-up{color:#4ade80}
 .fit-tr-dn{color:#f87171}
 .fit-tab{font-size:11px;letter-spacing:.5px}
+/* ── Stats / continuity ── */
+.sec-t{font-size:11px;font-weight:700;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;margin:22px 0 10px}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px}
+.scv{font-size:24px;font-weight:900;color:var(--accent);letter-spacing:-.5px;line-height:1.1}
+.scv small{font-size:12px;font-weight:700;margin-left:2px}
+.scl{font-size:10px;color:var(--dim);margin-top:4px;letter-spacing:.5px}
+.scs{font-size:10px;color:var(--mid);margin-top:4px}
+.hmwrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px}
+.hm{display:flex;gap:3px;align-items:stretch}
+.hmw{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:3px}
+.hmc{width:100%;aspect-ratio:1;border-radius:3px;background:rgba(255,255,255,.05)}
+.hmc.l1{background:rgba(232,168,66,.22)}
+.hmc.l2{background:rgba(232,168,66,.45)}
+.hmc.l3{background:rgba(232,168,66,.7)}
+.hmc.l4{background:#E8A842}
+.hmc.nd{background:rgba(255,255,255,.015)}
+.hmc.td{box-shadow:0 0 0 1.5px var(--accent)}
+.hmdl{width:100%;aspect-ratio:1;font-size:8px;color:var(--dim);display:flex;align-items:center;justify-content:center}
+.hml{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--dim);margin-top:8px}
+.hmk{display:flex;align-items:center;gap:3px}
+.hmk .hmc{width:10px;height:10px;aspect-ratio:auto;flex-shrink:0}
+.tsr{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:6px}
+.tsh{display:flex;align-items:baseline;gap:8px}
+.tsn{font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tsv{font-size:14px;font-weight:700;color:var(--accent);flex-shrink:0}
+.tsb{height:5px;border-radius:3px;background:rgba(255,255,255,.06);margin-top:9px;overflow:hidden}
+.tsf{height:100%;border-radius:3px;background:linear-gradient(90deg,#E8A842,#D4793A);transition:width .6s}
+.tsm{display:flex;gap:12px;font-size:10px;color:var(--dim);margin-top:6px;flex-wrap:wrap}
+.st.risk{color:#F0A090}
+.bdg{font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--aglow);color:var(--accent);margin-left:5px;vertical-align:1px}
+/* Settings */
+.sw{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 14px;margin-bottom:8px;gap:10px}
+.swb{flex:1;min-width:0}
+.swl{font-size:14px;font-weight:500}
+.swd{font-size:10px;color:var(--dim);margin-top:3px;line-height:1.5}
+.tgl{width:46px;height:27px;border-radius:14px;background:rgba(255,255,255,.1);border:none;position:relative;flex-shrink:0;cursor:pointer;transition:background .2s}
+.tgl.on{background:var(--accent)}
+.tgl::after{content:'';position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:transform .2s}
+.tgl.on::after{transform:translateX(19px)}
+.tgl:disabled{opacity:.3}
+.tmi{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:14px;font-family:var(--font);outline:none;flex-shrink:0}
+.tmi:focus{border-color:rgba(232,168,66,.4)}
+.note{font-size:11px;color:var(--dim);line-height:1.7;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-top:8px}
+.note b{color:var(--mid);font-weight:700}
+.pbtn{width:100%;padding:13px;background:var(--aglow);border:1px solid rgba(232,168,66,.25);border-radius:12px;color:var(--accent);font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer;margin-bottom:8px}
+.pbtn:active{transform:scale(.98)}
+/* Celebration */
+.cele{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(15,17,23,.7);backdrop-filter:blur(6px);animation:fi .25s ease;pointer-events:none;overflow:hidden}
+.cele-e{font-size:72px;animation:pop .6s cubic-bezier(.2,1.6,.4,1) both}
+.cele-t{font-size:22px;font-weight:900;margin-top:8px;background:linear-gradient(135deg,#E8A842,#D4793A);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.cele-s{font-size:13px;color:var(--mid);margin-top:6px;padding:0 30px;text-align:center}
+@keyframes pop{0%{opacity:0;transform:scale(.3) rotate(-14deg)}60%{opacity:1;transform:scale(1.15) rotate(5deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+.cf{position:absolute;width:8px;height:13px;border-radius:2px;top:-24px;animation:cfall linear forwards}
+@keyframes cfall{to{transform:translateY(112vh) rotate(760deg)}}
 </style>
 </head>
 <body>
@@ -227,16 +282,26 @@ const WORKOUTS={
   C:[{id:'deadlift',name:'デッドリフト',sets:3,reps:'5-6'},{id:'rdl',name:'RDL',sets:3,reps:'8-10'},{id:'pullupC',name:'懸垂',sets:3,reps:'限界',bw:true},{id:'hanglegraise',name:'ハンギングレッグレイズ',sets:3,reps:'10-15',bw:true}]
 };
 const DN=['日','月','火','水','木','金','土'];
+// 継続マイルストーン（この日数に到達したら祝う）
+const MILES=[3,7,14,21,30,50,75,100,150,200,300,365];
+const HIST_CAP=400;          // 統計でさかのぼる最大日数
+const NWIN=45;               // 通知: 予定時刻からこの分数以内なら発火
+// Firebase Console → プロジェクトの設定 → Cloud Messaging → ウェブプッシュ証明書 の「鍵ペア」を貼ると
+// アプリを閉じていても届くプッシュ通知が有効になる（空のままなら前面表示中のみ通知）
+const VAPID_KEY='';
 
 // ── State ──
 let S={user:null,authOk:false,dataOk:false,
   // routine
-  tasks:[],comps:{},rView:'home',rDate:fmtD(new Date()),editId:null,pop:null,form:{name:'',days:[0,1,2,3,4,5,6],icon:'✅'},
+  tasks:[],comps:{},rView:'home',rDate:fmtD(new Date()),editId:null,pop:null,form:{name:'',days:[0,1,2,3,4,5,6],icon:'✅',time:''},
   // fitness
   fit:{workouts:{},runs:{},weight:{},meals:{}},fDate:fmtD(new Date()),fTab:'log',reports:[],reportIdx:0,
+  // settings / notifications
+  settings:defSettings(),
   // global
-  tab:'routine',toast:null,unsub:[]};
-let toastT;
+  tab:'routine',toast:null,cele:null,unsub:[]};
+let toastT,celeT;
+function defSettings(){return{notif:{on:false,morningOn:true,morning:'07:30',eveningOn:true,evening:'21:00',taskOn:true},pushTokens:{}};}
 
 // ── Helpers ──
 function fmtD(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
@@ -255,12 +320,14 @@ function startSync(uid){
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','completions'),s=>{if(s.exists())S.comps=s.data().entries||{};render();}));
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','fitness'),s=>{if(s.exists()){const d=s.data();S.fit={workouts:d.workouts||{},runs:d.runs||{},weight:d.weight||{},meals:d.meals||{}};}render();}));
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','reports'),s=>{if(s.exists()){S.reports=s.data().items||[];}render();}));
+  S.unsub.push(onSnapshot(doc(db,'users',uid,'data','settings'),s=>{const d=s.exists()?s.data():{},def=defSettings();S.settings={notif:Object.assign(def.notif,d.notif||{}),pushTokens:d.pushTokens||{}};render();}));
 }
 async function saveR(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','tasks'),{items:S.tasks});}catch(e){}}
 async function saveC(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','completions'),{entries:S.comps});}catch(e){}}
 async function saveF(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','fitness'),S.fit);}catch(e){}}
+async function saveS(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','settings'),S.settings);}catch(e){console.error(e);}}
 
-onAuthStateChanged(auth,u=>{S.user=u;S.authOk=true;if(u)startSync(u.uid);else{S.dataOk=false;S.tasks=[];S.comps={};S.fit={workouts:{},runs:{},weight:{},meals:{}};render();}});
+onAuthStateChanged(auth,u=>{S.user=u;S.authOk=true;if(u)startSync(u.uid);else{S.dataOk=false;S.tasks=[];S.comps={};S.fit={workouts:{},runs:{},weight:{},meals:{}};S.settings=defSettings();render();}});
 getRedirectResult(auth).catch(()=>{});
 async function login(){const p=new GoogleAuthProvider();try{await signInWithPopup(auth,p);}catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/popup-closed-by-user')await signInWithRedirect(auth,p);}}
 async function logout(){S.unsub.forEach(u=>u());S.unsub=[];await signOut(auth);}
@@ -284,10 +351,178 @@ function viewTasks(){
 function isCarryover(id){return isRToday()&&yesterdayCarryover().some(t=>t.id===id);}
 function compDateFor(id){return isCarryover(id)?fmtD(yesterdayDate()):S.rDate;}
 function isComp(id){return !!S.comps[`${compDateFor(id)}:${id}`];}
-function toggleComp(id){const k=`${compDateFor(id)}:${id}`;if(S.comps[k])delete S.comps[k];else S.comps[k]=Date.now();saveC();render();}
+function toggleComp(id){
+  const k=`${compDateFor(id)}:${id}`,was=!!S.comps[k];
+  if(was)delete S.comps[k];else S.comps[k]=Date.now();
+  saveC();
+  if(!was&&isRToday()&&!isCarryover(id)){
+    const t=S.tasks.find(x=>x.id===id);
+    if(t){
+      const sk=getStreak(t),all=viewTasks();
+      if(MILES.indexOf(sk)>=0)celebrate('🔥',`${sk}日連続！`,`${t.icon} ${t.name}`);
+      else if(all.length>1&&all.every(x=>isComp(x.id))){const ps=perfectStreak();celebrate('🎉','今日のルーティン完了！',ps>1?`パーフェクトデー ${ps}日連続`:'全タスク達成');}
+    }
+  }
+  render();
+}
 function getStreak(t){let s=0;const d=new Date();if(t.days.includes(DAY_MAP[d.getDay()])&&S.comps[`${fmtD(d)}:${t.id}`])s=1;d.setDate(d.getDate()-1);for(let i=0;i<365;i++){if(t.days.includes(DAY_MAP[d.getDay()])){if(S.comps[`${fmtD(d)}:${t.id}`])s++;else break;}d.setDate(d.getDate()-1);}return s;}
 function rPct(){const t=viewTasks();return t.length?Math.round(t.filter(x=>isComp(x.id)).length/t.length*100):0;}
 function rDateLabel(){const d=rDateObj(),w=DN[d.getDay()];return `${d.getMonth()+1}月${d.getDate()}日（${w}）`;}
+
+// ── 継続性の統計 ──
+function sod(ms){const d=new Date(ms);d.setHours(0,0,0,0);return d.getTime();}
+// その日に存在していた（作成済みの）該当タスク
+function dayTaskList(ds){const t=parseD(ds).getTime(),di=DAY_MAP[parseD(ds).getDay()];return S.tasks.filter(x=>x.days.includes(di)&&(!x.createdAt||sod(x.createdAt)<=t));}
+function dayRatio(ds){const ts=dayTaskList(ds);if(!ts.length)return null;return ts.filter(t=>S.comps[`${ds}:${t.id}`]).length/ts.length;}
+// 記録の開始日（最古のタスク作成日 or 最古の完了日。HIST_CAP日が上限）
+function histStart(){
+  let min=null;
+  S.tasks.forEach(t=>{if(t.createdAt&&(min===null||t.createdAt<min))min=t.createdAt;});
+  Object.keys(S.comps).forEach(k=>{const t=parseD(k.slice(0,10)).getTime();if(min===null||t<min)min=t;});
+  const cap=new Date();cap.setDate(cap.getDate()-HIST_CAP);cap.setHours(0,0,0,0);
+  return new Date(Math.max(min===null?Date.now():min,cap.getTime()));
+}
+// 全タスク達成した日（パーフェクトデー）の現在連続数。当日未達成はまだ途切れ扱いにしない
+function perfectStreak(){
+  let n=0;const d=new Date();
+  for(let i=0;i<HIST_CAP;i++){
+    const r=dayRatio(fmtD(d));
+    if(r===null){d.setDate(d.getDate()-1);continue;}
+    if(r>=1)n++;else if(i>0)break;
+    d.setDate(d.getDate()-1);
+  }
+  return n;
+}
+function bestPerfect(){
+  const today=fmtD(new Date());let best=0,cur=0;
+  for(let d=histStart();fmtD(d)<=today;d.setDate(d.getDate()+1)){
+    const r=dayRatio(fmtD(d));
+    if(r===null)continue;
+    if(r>=1){cur++;if(cur>best)best=cur;}else if(fmtD(d)!==today)cur=0;
+  }
+  return best;
+}
+function bestStreak(t){
+  const start=new Date(Math.max(t.createdAt?sod(t.createdAt):0,histStart().getTime()));
+  const today=fmtD(new Date());let best=0,cur=0;
+  for(let d=new Date(start);fmtD(d)<=today;d.setDate(d.getDate()+1)){
+    if(!t.days.includes(DAY_MAP[d.getDay()]))continue;
+    const ds=fmtD(d);
+    if(S.comps[`${ds}:${t.id}`]){cur++;if(cur>best)best=cur;}
+    else if(ds!==today)cur=0;
+  }
+  return best;
+}
+// 直近 days 日のタスク別達成率
+function taskRate(t,days){
+  let tot=0,done=0;const d=new Date();
+  for(let i=0;i<days;i++){
+    const ds=fmtD(d);
+    if(t.days.includes(DAY_MAP[d.getDay()])&&(!t.createdAt||sod(t.createdAt)<=parseD(ds).getTime())){tot++;if(S.comps[`${ds}:${t.id}`])done++;}
+    d.setDate(d.getDate()-1);
+  }
+  return{pct:tot?Math.round(done/tot*100):0,done,tot};
+}
+// 直近 days 日の全体達成率
+function periodRate(days){
+  let tot=0,done=0;const d=new Date();
+  for(let i=0;i<days;i++){
+    const ds=fmtD(d),ts=dayTaskList(ds);
+    tot+=ts.length;done+=ts.filter(t=>S.comps[`${ds}:${t.id}`]).length;
+    d.setDate(d.getDate()-1);
+  }
+  return tot?Math.round(done/tot*100):0;
+}
+function totalDone(){return Object.keys(S.comps).length;}
+// 今日やれば連続が伸びる／落とすと途切れるタスク
+function atRisk(){const ds=fmtD(new Date());return todayTasks().filter(t=>!S.comps[`${ds}:${t.id}`]&&getStreak(t)>=3);}
+
+// ── お祝い ──
+function celebrate(emoji,title,sub){
+  S.cele={emoji,title,sub};
+  clearTimeout(celeT);celeT=setTimeout(()=>{S.cele=null;render();},2800);
+  if(navigator.vibrate)try{navigator.vibrate([14,50,20]);}catch(e){}
+}
+function renderCele(){
+  const c=S.cele;if(!c)return'';
+  const cols=['#E8A842','#D4793A','#4ade80','#60a5fa','#f87171','#E8E6F0'];
+  let cf='';
+  for(let i=0;i<26;i++)cf+=`<div class="cf" style="left:${Math.round(Math.random()*96)}%;background:${cols[i%cols.length]};animation-duration:${(1.4+Math.random()*1.2).toFixed(2)}s;animation-delay:${(Math.random()*.5).toFixed(2)}s"></div>`;
+  return`<div class="cele">${cf}<div class="cele-e">${c.emoji}</div><div class="cele-t">${esc(c.title)}</div><div class="cele-s">${esc(c.sub)}</div></div>`;
+}
+
+// ── 通知 ──
+let swReg=null,notifT=null;
+function isStandalone(){return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;}
+function notifSupported(){return typeof Notification!=='undefined';}
+function notifPerm(){return notifSupported()?Notification.permission:'unsupported';}
+async function initSW(){
+  if(!('serviceWorker'in navigator))return;
+  try{swReg=await navigator.serviceWorker.register('sw.js');}catch(e){console.warn('sw register failed',e);}
+}
+async function askNotif(){
+  if(!notifSupported()){toast(isStandalone()?'この端末は通知に未対応です':'ホーム画面に追加すると通知できます');return false;}
+  let pm=Notification.permission;
+  if(pm==='default')try{pm=await Notification.requestPermission();}catch(e){pm='denied';}
+  if(pm!=='granted'){toast('通知がブロックされています');render();return false;}
+  await registerPush();
+  return true;
+}
+function fire(title,body,tag){
+  const o={body,icon:'icon-daily.png',badge:'icon-daily.png',tag,data:{url:location.href}};
+  try{
+    if(swReg&&swReg.showNotification)swReg.showNotification(title,o);
+    else if(notifSupported())new Notification(title,o);
+  }catch(e){console.warn('notify failed',e);}
+}
+const LSK='daily_notif_log';
+function nlog(){try{return JSON.parse(localStorage.getItem(LSK)||'{}');}catch(e){return{};}}
+function nmark(k){const l=nlog();l[k]=1;const ds=fmtD(new Date());Object.keys(l).forEach(x=>{if(x.slice(0,10)<ds)delete l[x];});try{localStorage.setItem(LSK,JSON.stringify(l));}catch(e){}}
+function hm2m(v){const a=String(v||'').split(':');return(parseInt(a[0],10)||0)*60+(parseInt(a[1],10)||0);}
+function nameList(ts,max){return ts.slice(0,max).map(t=>t.name).join('・')+(ts.length>max?` ほか${ts.length-max}件`:'');}
+// 前面で動いている間、予定時刻を過ぎた通知を発火する（1日1回まで）
+function checkNotifs(){
+  const n=S.settings.notif;
+  if(!S.user||!S.dataOk||!n.on||notifPerm()!=='granted')return;
+  const now=new Date(),ds=fmtD(now),cur=now.getHours()*60+now.getMinutes(),log=nlog();
+  const due=m=>{const d=cur-m;return d>=0&&d<NWIN;};
+  const ts=todayTasks(),left=ts.filter(t=>!S.comps[`${ds}:${t.id}`]);
+  if(n.morningOn&&ts.length&&due(hm2m(n.morning))&&!log[`${ds}:am`]){
+    nmark(`${ds}:am`);fire('☀️ 今日のルーティン',`${ts.length}件 — ${nameList(ts,3)}`,'am');
+  }
+  if(n.taskOn)ts.forEach(t=>{
+    if(!t.time||S.comps[`${ds}:${t.id}`])return;
+    const k=`${ds}:t:${t.id}`;
+    if(!due(hm2m(t.time))||log[k])return;
+    const sk=getStreak(t);
+    nmark(k);fire(`${t.icon} ${t.name}`,sk>0?`🔥 ${sk}日連続中 — 今日で${sk+1}日目`:'いま実行する時間です',`t${t.id}`);
+  });
+  if(n.eveningOn&&left.length&&due(hm2m(n.evening))&&!log[`${ds}:pm`]){
+    const risky=left.filter(t=>getStreak(t)>=3);
+    nmark(`${ds}:pm`);
+    fire('🌙 未完了のルーティン',risky.length?`あと${left.length}件 — ⚠️ ${risky[0].name} の${getStreak(risky[0])}日連続が途切れます`:`あと${left.length}件 — ${nameList(left,3)}`,'pm');
+  }
+}
+function startNotifLoop(){
+  if(notifT)return;
+  notifT=setInterval(checkNotifs,60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkNotifs();});
+  setTimeout(()=>{if(S.settings.notif.on&&notifPerm()==='granted')registerPush();checkNotifs();},4000);
+}
+// FCM: VAPID_KEY を設定するとアプリを閉じていてもプッシュが届く（送信は notify.mjs 側）
+async function registerPush(){
+  if(!VAPID_KEY||!swReg||!S.user)return;
+  try{
+    const{getMessaging,getToken}=await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-messaging.js');
+    const tk=await getToken(getMessaging(fbApp),{vapidKey:VAPID_KEY,serviceWorkerRegistration:swReg});
+    if(!tk)return;
+    const prev=S.settings.pushTokens[tk];
+    if(!prev||Date.now()-(prev.at||0)>7*864e5){
+      S.settings.pushTokens[tk]={ua:navigator.userAgent.slice(0,120),at:Date.now()};
+      await setDoc(doc(db,'users',S.user.uid,'data','settings'),{pushTokens:{[tk]:S.settings.pushTokens[tk]}},{merge:true});
+    }
+  }catch(e){console.warn('push register failed',e);}
+}
 
 // ── Fitness helpers ──
 function getPrev(exId,beforeDate){const dates=Object.keys(S.fit.workouts).filter(d=>d<beforeDate).sort().reverse();for(const d of dates){const w=S.fit.workouts[d];if(w&&w[exId])return w[exId];}return null;}
@@ -300,12 +535,13 @@ function render(){
   if(!S.dataOk){a.innerHTML='<div class="lw"><div class="sp"></div></div>';return;}
   let html='';
   if(S.tab==='routine'){
-    html=S.rView==='week'?renderWeek():(S.rView==='add'||S.rView==='edit')?renderRForm():renderRHome();
+    html=S.rView==='week'?renderWeek():S.rView==='stats'?renderStats():S.rView==='settings'?renderSettings():(S.rView==='add'||S.rView==='edit')?renderRForm():renderRHome();
   }else{
     html=renderFitness();
   }
   html+=renderBTabs();
   if(S.toast)html+=`<div class="toast">${esc(S.toast)}</div>`;
+  html+=renderCele();
   a.innerHTML=html;
   bind();
 }
@@ -320,10 +556,11 @@ function renderRHome(){
   const sorted=[...tasks].sort((a,b)=>(isComp(a.id)?1:0)-(isComp(b.id)?1:0));
   const today=isRToday();
   return `<div class="app-inner">
-    <div class="header"><div><div class="date-label">${today?dlabel():rDateLabel()}</div><div class="greeting">${today?greet():'入力修正'}</div></div><div style="display:flex;gap:6px"><button class="hbtn" data-a="week" title="週間スケジュール">📅</button><button class="hbtn" data-a="logout" title="ログアウト">↗</button></div></div>
+    <div class="header"><div><div class="date-label">${today?dlabel():rDateLabel()}</div><div class="greeting">${today?greet():'入力修正'}</div></div><div style="display:flex;gap:6px"><button class="hbtn" data-a="stats" title="継続記録">📊</button><button class="hbtn" data-a="week" title="週間スケジュール">📅</button><button class="hbtn" data-a="settings" title="設定">⚙</button></div></div>
     <div class="dn"><button class="dnb" data-a="rPrev">◀</button><div class="dnc"><div class="dnd">${rDateLabel()}${today?'<span class="today-badge">TODAY</span>':''}</div></div>${today?'':'<button class="dnb" data-a="rNext">▶</button>'}<button class="dnb" data-a="rToday" title="今日" style="${today?'opacity:.3;pointer-events:none':''}">●</button></div>
     <div class="pw"><div class="rc"><svg viewBox="0 0 104 104"><defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#E8A842"/><stop offset="100%" stop-color="#D4793A"/></linearGradient></defs><circle cx="52" cy="52" r="46" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/><circle cx="52" cy="52" r="46" fill="none" stroke="url(#rg)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(p/100)*c} ${c}" transform="rotate(-90 52 52)" style="transition:stroke-dasharray .7s cubic-bezier(.4,0,.2,1)"/></svg><div class="rt"><div class="rp">${p}%</div><div class="rs">${done}/${tasks.length}</div></div></div></div>
-    ${tasks.length===0?`<div class="empty"><div class="ei">${today?'🌱':'📭'}</div><div class="et">${today?'ルーティンを始めましょう':'この日のタスクはありません'}</div><div class="ed">${today?'＋ボタンからタスクを追加':''}</div></div>`:`<div class="tl">${sorted.map((t,i)=>{const d=isComp(t.id),sk=today?getStreak(t):0,co=isCarryover(t.id);return`<div class="tc ${d?'done':''}" style="animation-delay:${i*.04}s;${S.pop===t.id?'z-index:20':''}"><button class="cb ${d?'ck':''}" data-a="toggle" data-id="${t.id}">${d?'✓':''}</button><div class="tb" data-a="toggle" data-id="${t.id}"><div class="tn">${t.icon} ${esc(t.name)}${co?' <span style="font-size:10px;color:var(--accent);font-weight:700;background:var(--aglow);padding:1px 6px;border-radius:4px">昨日</span>':''}</div>${sk>0?`<div class="st">🔥 ${sk}回連続</div>`:''}${t.days.length<7&&!co?`<div class="td">${dlStr(t.days)}</div>`:''}</div>${today?`<button class="mb" data-a="more" data-id="${t.id}">⋯</button>${S.pop===t.id?`<div class="po"><button class="pb edt" data-a="edit" data-id="${t.id}">✏️ 編集</button><button class="pb del" data-a="delete" data-id="${t.id}">🗑 削除</button></div>`:''}`:''}</div>`;}).join('')}</div>`}
+    ${today&&tasks.length?renderMomentum():''}
+    ${tasks.length===0?`<div class="empty"><div class="ei">${today?'🌱':'📭'}</div><div class="et">${today?'ルーティンを始めましょう':'この日のタスクはありません'}</div><div class="ed">${today?'＋ボタンからタスクを追加':''}</div></div>`:`<div class="tl">${sorted.map((t,i)=>{const d=isComp(t.id),sk=today?getStreak(t):0,co=isCarryover(t.id);return`<div class="tc ${d?'done':''}" style="animation-delay:${i*.04}s;${S.pop===t.id?'z-index:20':''}"><button class="cb ${d?'ck':''}" data-a="toggle" data-id="${t.id}">${d?'✓':''}</button><div class="tb" data-a="toggle" data-id="${t.id}"><div class="tn">${t.icon} ${esc(t.name)}${co?' <span style="font-size:10px;color:var(--accent);font-weight:700;background:var(--aglow);padding:1px 6px;border-radius:4px">昨日</span>':''}</div>${sk>0?`<div class="st${!d&&sk>=7?' risk':''}">${!d&&sk>=7?'⚠️':'🔥'} ${sk}日連続${d?'':` → 今日で${sk+1}日目`}</div>`:''}${metaLine(t,co)}</div>${today?`<button class="mb" data-a="more" data-id="${t.id}">⋯</button>${S.pop===t.id?`<div class="po"><button class="pb edt" data-a="edit" data-id="${t.id}">✏️ 編集</button><button class="pb del" data-a="delete" data-id="${t.id}">🗑 削除</button></div>`:''}`:''}</div>`;}).join('')}</div>`}
   </div>${today?'<button class="fab" data-a="add">＋</button>':''}${S.pop?'<div class="bd" data-a="closepop"></div>':''}`;
 }
 
@@ -332,8 +569,108 @@ function renderRForm(){
   return `<div class="app-inner fv"><div class="stl">${e?'ルーティンを編集':'新しいルーティン'}</div>
     <div class="ig"><label class="il">タスク名</label><input class="ti" id="ni" value="${esc(f.name)}" placeholder="例: 朝のストレッチ" autofocus></div>
     <div class="ig"><label class="il">繰り返し</label><div class="ps"><button class="psb" data-a="preset" data-v="all">毎日</button><button class="psb" data-a="preset" data-v="wd">平日</button><button class="psb" data-a="preset" data-v="we">週末</button></div><div class="dg">${DAYS.map((d,i)=>`<button class="db ${f.days.includes(i)?'ac':''}" data-a="dayT" data-idx="${i}">${d}</button>`).join('')}</div></div>
+    <div class="ig"><label class="il">リマインド時刻（任意）</label><div style="display:flex;gap:8px;align-items:center"><input class="tmi" type="time" value="${f.time||''}" data-a="fTime" style="flex:1"><button class="psb" data-a="fTimeClear">クリア</button></div><div class="swd" style="margin-top:7px">設定するとこの時刻に通知します（設定 → 通知をON）</div></div>
     <div class="ig"><label class="il">アイコン</label><div class="icg">${R_ICONS.map(ic=>`<button class="icb ${f.icon===ic?'ac':''}" data-a="icon" data-v="${ic}">${ic}</button>`).join('')}</div></div>
     <div class="fa"><button class="bc" data-a="cancel">キャンセル</button><button class="bs" data-a="save" ${f.name.trim()&&f.days.length?'':'disabled'}>${e?'保存する':'追加する'}</button></div></div>`;
+}
+
+
+function metaLine(t,co){
+  const bits=[];
+  if(t.days.length<7&&!co)bits.push(dlStr(t.days));
+  if(t.time)bits.push('⏰ '+t.time);
+  return bits.length?`<div class="td">${bits.join(' · ')}</div>`:'';
+}
+
+// 今日のモチベーション帯（ring の下）
+function renderMomentum(){
+  const ps=perfectStreak(),risk=atRisk();
+  let html=`<div class="scs" style="text-align:center;margin:-14px 0 18px">${ps>0?`🎯 パーフェクトデー <b style="color:var(--accent)">${ps}</b> 日連続 ・ `:''}30日達成率 <b style="color:var(--accent)">${periodRate(30)}%</b></div>`;
+  if(risk.length){
+    const top=risk.sort((a,b)=>getStreak(b)-getStreak(a))[0];
+    html+=`<div class="note" style="margin:0 0 14px;border-color:rgba(232,168,66,.25);color:var(--mid)">⚠️ <b>${esc(top.icon+' '+top.name)}</b> の ${getStreak(top)}日連続${risk.length>1?`（ほか${risk.length-1}件）`:''}が今日で途切れます</div>`;
+  }
+  return html;
+}
+
+// ── 継続記録ビュー ──
+function renderStats(){
+  const ps=perfectStreak(),bp=bestPerfect(),r7=periodRate(7),r30=periodRate(30);
+  const ranked=S.tasks.map(t=>({t,sk:getStreak(t),bs:bestStreak(t),r:taskRate(t,30)})).sort((a,b)=>b.sk-a.sk||b.r.pct-a.r.pct);
+  let html=`<div class="app-inner fv"><div class="stl">📊 継続記録</div>
+    <div class="sg">
+      <div class="sc"><div class="scv">${ps}<small>日</small></div><div class="scl">パーフェクトデー連続</div><div class="scs">自己最高 ${bp}日</div></div>
+      <div class="sc"><div class="scv">${r30}<small>%</small></div><div class="scl">達成率（30日）</div><div class="scs">直近7日 ${r7}%</div></div>
+      <div class="sc"><div class="scv">${totalDone()}</div><div class="scl">のべ完了タスク</div><div class="scs">${S.tasks.length}件のルーティン</div></div>
+      <div class="sc"><div class="scv">${ranked.length?Math.max(...ranked.map(x=>x.bs)):0}<small>日</small></div><div class="scl">最長ストリーク</div><div class="scs">${ranked.length&&ranked.some(x=>x.bs>0)?esc(ranked.slice().sort((a,b)=>b.bs-a.bs)[0].t.name):'—'}</div></div>
+    </div>
+    <div class="sec-t">達成ヒートマップ（18週）</div>
+    ${renderHeatmap(18)}
+    <div class="sec-t">タスク別</div>`;
+  if(!ranked.length)html+=`<div class="note">ルーティンを追加すると記録が表示されます</div>`;
+  ranked.forEach(({t,sk,bs,r})=>{
+    const next=MILES.find(m=>m>sk);
+    html+=`<div class="tsr">
+      <div class="tsh"><div class="tsn">${t.icon} ${esc(t.name)}</div><div class="tsv">${r.pct}%</div></div>
+      <div class="tsb"><div class="tsf" style="width:${r.pct}%"></div></div>
+      <div class="tsm"><span>🔥 現在 ${sk}日</span><span>🏅 最長 ${bs}日</span><span>${r.done}/${r.tot}回（30日）</span>${next?`<span>次の節目まで ${next-sk}日</span>`:''}</div>
+    </div>`;
+  });
+  html+=`<div class="fa"><button class="bc" data-a="weekBack" style="flex:1">← 戻る</button></div></div>`;
+  return html;
+}
+
+function renderHeatmap(weeks){
+  const today=new Date();today.setHours(0,0,0,0);
+  const end=new Date(today);end.setDate(end.getDate()+(6-DAY_MAP[today.getDay()]));
+  const start=new Date(end);start.setDate(start.getDate()-(weeks*7-1));
+  const todayS=fmtD(today);
+  const labels=['月','','水','','金','','日'];
+  let cols=`<div class="hmw">${labels.map(l=>`<div class="hmdl">${l}</div>`).join('')}</div>`;
+  for(let w=0;w<weeks;w++){
+    let cells='';
+    for(let i=0;i<7;i++){
+      const d=new Date(start);d.setDate(d.getDate()+w*7+i);
+      const ds=fmtD(d);let cls='hmc',tip=ds;
+      if(ds>todayS)cls+=' nd';
+      else{
+        const r=dayRatio(ds);
+        if(r===null)cls+=' nd';
+        else{
+          cls+=r>=1?' l4':r>=.67?' l3':r>=.34?' l2':r>0?' l1':'';
+          tip=`${ds} ${Math.round(r*100)}%`;
+        }
+      }
+      if(ds===todayS)cls+=' td';
+      cells+=`<div class="${cls}" title="${tip}"></div>`;
+    }
+    cols+=`<div class="hmw">${cells}</div>`;
+  }
+  return `<div class="hmwrap"><div class="hm">${cols}</div>
+    <div class="hml"><span>${start.getMonth()+1}/${start.getDate()}</span><span class="hmk">少<span class="hmc"></span><span class="hmc l1"></span><span class="hmc l2"></span><span class="hmc l3"></span><span class="hmc l4"></span>全部</span><span>今日</span></div></div>`;
+}
+
+// ── 設定ビュー ──
+function renderSettings(){
+  const n=S.settings.notif,perm=notifPerm(),ok=perm==='granted';
+  const timed=S.tasks.filter(t=>t.time);
+  let html=`<div class="app-inner fv"><div class="stl">⚙ 設定</div><div class="sec-t">通知</div>`;
+  if(!notifSupported())html+=`<div class="note">この端末では通知が使えません。${isStandalone()?'':'<b>iPhone / iPad では Safari の共有ボタン →「ホーム画面に追加」</b>したアイコンから開くと通知が有効になります。'}</div>`;
+  else if(perm==='denied')html+=`<div class="note">通知がブロックされています。端末の<b>設定 → 通知 → Daily</b> から許可してください。</div>`;
+  else if(!ok)html+=`<button class="pbtn" data-a="askNotif">🔔 通知を許可する</button>`;
+  html+=`<div class="sw"><div class="swb"><div class="swl">リマインダー</div><div class="swd">未完了のルーティンを知らせます</div></div><button class="tgl ${n.on&&ok?'on':''}" data-a="nToggle" data-k="on" ${ok?'':'disabled'}></button></div>`;
+  if(n.on&&ok){
+    html+=`<div class="sw"><div class="swb"><div class="swl">☀️ 朝のまとめ</div><div class="swd">今日やることを一覧で通知</div></div><div style="display:flex;align-items:center;gap:8px"><input class="tmi" type="time" value="${n.morning}" data-a="nTime" data-k="morning"><button class="tgl ${n.morningOn?'on':''}" data-a="nToggle" data-k="morningOn"></button></div></div>
+    <div class="sw"><div class="swb"><div class="swl">🌙 夜の未完了</div><div class="swd">残りタスクと連続記録が途切れる警告</div></div><div style="display:flex;align-items:center;gap:8px"><input class="tmi" type="time" value="${n.evening}" data-a="nTime" data-k="evening"><button class="tgl ${n.eveningOn?'on':''}" data-a="nToggle" data-k="eveningOn"></button></div></div>
+    <div class="sw"><div class="swb"><div class="swl">⏰ タスクごとの時刻</div><div class="swd">${timed.length?timed.map(t=>`${t.icon}${esc(t.name)} ${t.time}`).join(' / '):'タスクの編集画面で時刻を設定すると通知されます'}</div></div><button class="tgl ${n.taskOn?'on':''}" data-a="nToggle" data-k="taskOn"></button></div>
+    <button class="pbtn" data-a="testNotif">テスト通知を送る</button>`;
+  }
+  html+=`<div class="note">${VAPID_KEY?'プッシュ配信が有効です。アプリを閉じていても通知が届きます。':'<b>現在の制限:</b> アプリを開いている間だけ通知が発火します。閉じていても届けるには Firebase のウェブプッシュ鍵（VAPID）と送信スクリプトの設定が必要です（<b>docs/notifications.md</b> 参照）。'}</div>
+    <div class="sec-t">アカウント</div>
+    <div class="sw"><div class="swb"><div class="swl">${esc(S.user.displayName||'ログイン中')}</div><div class="swd">${esc(S.user.email||'')}</div></div></div>
+    <button class="pbtn" data-a="logout" style="color:var(--danger);background:rgba(224,82,82,.1);border-color:rgba(224,82,82,.25)">ログアウト</button>
+    <div class="fa"><button class="bc" data-a="weekBack" style="flex:1">← 戻る</button></div></div>`;
+  return html;
 }
 
 // ── Week schedule view ──
@@ -470,7 +807,7 @@ function renderFReport(){
   if(!S.reports.length)return `<div class="fit-section"><div class="fit-rest"><span style="font-size:36px;display:block;margin-bottom:8px">🏋️</span><div class="fit-rest-t">トレーナーアドバイスはまだありません</div><div class="fit-rest-s">毎週金曜8:00に自動生成されます</div></div></div>`;
   const r=S.reports[S.reportIdx]||S.reports[0];
   let html=`<div class="fit-section">`;
-  if(S.reports.length>1)html+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><button class="fit-dnb" data-a="rPrev" ${S.reportIdx>=S.reports.length-1?'style="opacity:.3"':''}>◀</button><span style="font-size:12px;color:#6b6b80">${r.date}（${S.reportIdx+1}/${S.reports.length}）</span><button class="fit-dnb" data-a="rNext" ${S.reportIdx<=0?'style="opacity:.3"':''}>▶</button></div>`;
+  if(S.reports.length>1)html+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><button class="fit-dnb" data-a="repPrev" ${S.reportIdx>=S.reports.length-1?'style="opacity:.3"':''}>◀</button><span style="font-size:12px;color:#6b6b80">${r.date}（${S.reportIdx+1}/${S.reports.length}）</span><button class="fit-dnb" data-a="repNext" ${S.reportIdx<=0?'style="opacity:.3"':''}>▶</button></div>`;
   else html+=`<div style="text-align:center;margin-bottom:12px;font-size:12px;color:#6b6b80">${r.date}</div>`;
   html+=`<div class="fit-report-body">${mdToHtml(r.content)}</div></div>`;
   return html;
@@ -607,6 +944,7 @@ function mdToHtml(md){
 function bind(){
   document.querySelectorAll('[data-a]').forEach(el=>{if(el.tagName!=='INPUT'&&el.tagName!=='TEXTAREA')el.addEventListener('click',handleA);});
   document.querySelectorAll('[data-a]').forEach(el=>{if(el.tagName==='INPUT'||el.tagName==='TEXTAREA')el.addEventListener('change',handleA);});
+  document.querySelectorAll('[data-a="fTime"]').forEach(el=>el.addEventListener('input',handleA));
   const ni=document.getElementById('ni');
   if(ni)ni.addEventListener('input',e=>{S.form.name=e.target.value;const b=document.querySelector('[data-a="save"]');if(b)b.disabled=!(S.form.name.trim()&&S.form.days.length);});
 }
@@ -622,18 +960,31 @@ function handleA(e){
     case 'more':e.stopPropagation();S.pop=S.pop===id?null:id;render();break;
     case 'closepop':S.pop=null;render();break;
     case 'delete':S.tasks=S.tasks.filter(t=>t.id!==id);S.pop=null;saveR();toast('削除しました');break;
-    case 'edit':{const tk=S.tasks.find(t=>t.id===id);if(tk){S.form={name:tk.name,days:[...tk.days],icon:tk.icon};S.editId=id;S.rView='edit';S.pop=null;render();}}break;
-    case 'add':S.form={name:'',days:[0,1,2,3,4,5,6],icon:'✅'};S.rView='add';render();break;
+    case 'edit':{const tk=S.tasks.find(t=>t.id===id);if(tk){S.form={name:tk.name,days:[...tk.days],icon:tk.icon,time:tk.time||''};S.editId=id;S.rView='edit';S.pop=null;render();}}break;
+    case 'add':S.form={name:'',days:[0,1,2,3,4,5,6],icon:'✅',time:''};S.rView='add';render();break;
     case 'rPrev':{const d=rDateObj();d.setDate(d.getDate()-1);S.rDate=fmtD(d);render();}break;
     case 'rNext':{const d=rDateObj();d.setDate(d.getDate()+1);if(fmtD(d)<=fmtD(new Date())){S.rDate=fmtD(d);}render();}break;
     case 'rToday':S.rDate=fmtD(new Date());render();break;
     case 'week':S.rView='week';S.pop=null;render();break;
+    case 'stats':S.rView='stats';S.pop=null;render();break;
+    case 'settings':S.rView='settings';S.pop=null;render();break;
+    case 'fTime':S.form.time=el.value;break;
+    case 'fTimeClear':S.form.time='';render();break;
+    // 通知設定
+    case 'askNotif':askNotif().then(ok=>{if(ok){S.settings.notif.on=true;saveS();toast('通知を有効にしました');}render();});break;
+    case 'nToggle':{
+      const k=el.dataset.k;
+      if(k==='on'&&!S.settings.notif.on){askNotif().then(ok=>{if(ok){S.settings.notif.on=true;saveS();}render();});break;}
+      S.settings.notif[k]=!S.settings.notif[k];saveS();render();
+    }break;
+    case 'nTime':{const k=el.dataset.k;if(el.value){S.settings.notif[k]=el.value;saveS();}}break;
+    case 'testNotif':fire('🔔 テスト通知','この見た目で届きます','test');toast('送信しました');break;
     case 'weekBack':S.rView='home';render();break;
     case 'cancel':S.rView='home';S.editId=null;render();break;
     case 'save':
       if(!S.form.name.trim()||!S.form.days.length)return;
-      if(S.rView==='edit'&&S.editId){const t=S.tasks.find(t=>t.id===S.editId);if(t){t.name=S.form.name.trim();t.days=[...S.form.days];t.icon=S.form.icon;}}
-      else S.tasks.push({id:'t_'+Date.now(),name:S.form.name.trim(),days:[...S.form.days],icon:S.form.icon,createdAt:Date.now()});
+      if(S.rView==='edit'&&S.editId){const t=S.tasks.find(t=>t.id===S.editId);if(t){t.name=S.form.name.trim();t.days=[...S.form.days];t.icon=S.form.icon;t.time=S.form.time||'';}}
+      else S.tasks.push({id:'t_'+Date.now(),name:S.form.name.trim(),days:[...S.form.days],icon:S.form.icon,time:S.form.time||'',createdAt:Date.now()});
       saveR();S.rView='home';S.editId=null;toast('保存しました');break;
     case 'dayT':{const idx=parseInt(el.dataset.idx),i=S.form.days.indexOf(idx);if(i>=0)S.form.days.splice(i,1);else S.form.days.push(idx);S.form.days.sort((a,b)=>a-b);render();}break;
     case 'preset':{const map={all:[0,1,2,3,4,5,6],wd:[0,1,2,3,4],we:[5,6]};S.form.days=map[v];render();}break;
@@ -647,10 +998,13 @@ function handleA(e){
     case 'fRun':{const f=el.dataset.f;if(!S.fit.runs[S.fDate])S.fit.runs[S.fDate]={};S.fit.runs[S.fDate][f]=el.value;saveF();if(f==='distance'||f==='duration'){const r=S.fit.runs[S.fDate],dist=parseFloat(r.distance)||0,dur=parseFloat(r.duration)||0;let pace='—';if(dist>0&&dur>0){const pt=dur/dist;pace=`${Math.floor(pt)}:${String(Math.round((pt-Math.floor(pt))*60)).padStart(2,'0')}`;}const pe=document.querySelector('.fit-pace');if(pe)pe.textContent=pace;}}break;
     case 'fMeal':S.fit.meals[S.fDate]=el.value;saveF();break;
     case 'fToday':S.fDate=fmtD(new Date());render();break;
-    case 'rPrev':if(S.reportIdx<S.reports.length-1){S.reportIdx++;render();}break;
-    case 'rNext':if(S.reportIdx>0){S.reportIdx--;render();}break;
+    case 'repPrev':if(S.reportIdx<S.reports.length-1){S.reportIdx++;render();}break;
+    case 'repNext':if(S.reportIdx>0){S.reportIdx--;render();}break;
   }
 }
+
+initSW();
+startNotifLoop();
 render();
 </script>
 </body>

@@ -286,9 +286,10 @@ const DN=['日','月','火','水','木','金','土'];
 const MILES=[3,7,14,21,30,50,75,100,150,200,300,365];
 const HIST_CAP=400;          // 統計でさかのぼる最大日数
 const NWIN=45;               // 通知: 予定時刻からこの分数以内なら発火
-// Firebase Console → プロジェクトの設定 → Cloud Messaging → ウェブプッシュ証明書 の「鍵ペア」を貼ると
-// アプリを閉じていても届くプッシュ通知が有効になる（空のままなら前面表示中のみ通知）
-const VAPID_KEY='';
+// 標準 Web Push（RFC 8292 / VAPID）の公開鍵。公開して問題ない値。
+// 対になる秘密鍵は vapid.json（.gitignore 済み）にあり、送信側の notify.mjs が使う。
+// 空にすると前面表示中のみの通知に戻る。
+const VAPID_KEY='BDG75Fy7Nbw4yc_0bEaRzcwre870sXZG12s7wFFa_C96QsxPEK0Mc6hcX2QI6vabBa3E-Uds0kWSjPnEXGkdX8Q';
 
 // ── State ──
 let S={user:null,authOk:false,dataOk:false,
@@ -301,7 +302,7 @@ let S={user:null,authOk:false,dataOk:false,
   // global
   tab:'routine',toast:null,cele:null,unsub:[]};
 let toastT,celeT;
-function defSettings(){return{notif:{on:false,morningOn:true,morning:'07:30',eveningOn:true,evening:'21:00',taskOn:true},pushTokens:{}};}
+function defSettings(){return{notif:{on:false,morningOn:true,morning:'07:30',eveningOn:true,evening:'21:00',taskOn:true},pushSubs:{}};}
 
 // ── Helpers ──
 function fmtD(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
@@ -320,7 +321,7 @@ function startSync(uid){
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','completions'),s=>{if(s.exists())S.comps=s.data().entries||{};render();}));
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','fitness'),s=>{if(s.exists()){const d=s.data();S.fit={workouts:d.workouts||{},runs:d.runs||{},weight:d.weight||{},meals:d.meals||{}};}render();}));
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','reports'),s=>{if(s.exists()){S.reports=s.data().items||[];}render();}));
-  S.unsub.push(onSnapshot(doc(db,'users',uid,'data','settings'),s=>{const d=s.exists()?s.data():{},def=defSettings();S.settings={notif:Object.assign(def.notif,d.notif||{}),pushTokens:d.pushTokens||{}};render();}));
+  S.unsub.push(onSnapshot(doc(db,'users',uid,'data','settings'),s=>{const d=s.exists()?s.data():{},def=defSettings();S.settings={notif:Object.assign(def.notif,d.notif||{}),pushSubs:d.pushSubs||{}};render();}));
 }
 async function saveR(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','tasks'),{items:S.tasks});}catch(e){}}
 async function saveC(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','completions'),{entries:S.comps});}catch(e){}}
@@ -509,19 +510,32 @@ function startNotifLoop(){
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkNotifs();});
   setTimeout(()=>{if(S.settings.notif.on&&notifPerm()==='granted')registerPush();checkNotifs();},4000);
 }
-// FCM: VAPID_KEY を設定するとアプリを閉じていてもプッシュが届く（送信は notify.mjs 側）
+// 標準 Web Push の購読。アプリを閉じていても notify.mjs から通知が届くようになる
+function b64uToBytes(s){const pad='='.repeat((4-s.length%4)%4),raw=atob((s+pad).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(raw,c=>c.charCodeAt(0));}
+// endpoint は '/' を含み Firestore のマップキーに使えないのでハッシュを鍵にする
+async function subKey(ep){
+  const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(ep));
+  return [...new Uint8Array(h)].slice(0,12).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 async function registerPush(){
-  if(!VAPID_KEY||!swReg||!S.user)return;
+  if(!VAPID_KEY||!swReg||!S.user||!swReg.pushManager)return;
+  const opts={userVisibleOnly:true,applicationServerKey:b64uToBytes(VAPID_KEY)};
   try{
-    const{getMessaging,getToken}=await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-messaging.js');
-    const tk=await getToken(getMessaging(fbApp),{vapidKey:VAPID_KEY,serviceWorkerRegistration:swReg});
-    if(!tk)return;
-    const prev=S.settings.pushTokens[tk];
-    if(!prev||Date.now()-(prev.at||0)>7*864e5){
-      S.settings.pushTokens[tk]={ua:navigator.userAgent.slice(0,120),at:Date.now()};
-      await setDoc(doc(db,'users',S.user.uid,'data','settings'),{pushTokens:{[tk]:S.settings.pushTokens[tk]}},{merge:true});
+    let sub;
+    try{sub=await swReg.pushManager.subscribe(opts);}
+    catch(e){
+      // 別の鍵で購読済みだと InvalidStateError になる。解除して取り直す
+      const old=await swReg.pushManager.getSubscription();
+      if(!old)throw e;
+      await old.unsubscribe();
+      sub=await swReg.pushManager.subscribe(opts);
     }
-  }catch(e){console.warn('push register failed',e);}
+    const j=sub.toJSON(),k=await subKey(j.endpoint),prev=S.settings.pushSubs[k];
+    if(prev&&Date.now()-(prev.at||0)<7*864e5)return;
+    const rec={endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,ua:navigator.userAgent.slice(0,120),at:Date.now()};
+    S.settings.pushSubs[k]=rec;
+    await setDoc(doc(db,'users',S.user.uid,'data','settings'),{pushSubs:{[k]:rec}},{merge:true});
+  }catch(e){console.warn('push subscribe failed',e);}
 }
 
 // ── Fitness helpers ──

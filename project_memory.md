@@ -79,7 +79,7 @@
   - **データモデル追加**: タスクに `time`（"HH:MM" リマインド時刻、任意）、新ドキュメント `users/{uid}/data/settings`（notif設定 + pushTokens）、`users/{uid}/data/notifLog`
   - **バグ修正**: フィットネス「助言」タブのレポート送り矢印が `data-a="rPrev"/"rNext"` でルーティン日付ナビと `switch` の case 衝突を起こし、レポート切替の代わりに日付が動いていた → `repPrev`/`repNext` にリネーム
   - 統計ロジックはNodeハーネスで検証（ストリーク/最長/達成率/パーフェクトデー/空データ）、UIはheadless Chromeでスクリーンショット確認、28ステップのクリック操作スモークテストをPASS
-  - **未デプロイ**（コミット・push はしていない）
+  - デプロイ済み: commit `9be229c` を main にpush、GitHub Pages 反映を確認（`sw.js` 200 / index.html に新コード含む）。index.html・sw.js・notify.mjs・plist・docs/notifications.md・project_memory.md のみコミット、palavras関連の未コミット変更は対象外
 
 ### 過去の作業
 - フィットネス筋トレメニューの月曜と水曜を入れ替え
@@ -108,7 +108,6 @@
   - 未来日へは進めない制限付き
 
 ## 未完了・次にやること
-- **通知機能のデプロイ**: `index.html` / `sw.js` / `notify.mjs` / `com.routine-app.notify.plist` / `docs/notifications.md` が未コミット。commit + push で GitHub Pages に反映される
 - **プッシュ通知の有効化（任意）**: Firebase Console → routine-app-5eff3 → プロジェクトの設定 → Cloud Messaging → ウェブプッシュ証明書 で鍵ペアを生成し、`index.html` の `const VAPID_KEY=''` に貼る。その後アプリで通知を許可して端末トークンを登録 → `cp com.routine-app.notify.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ...` で送信を常駐（詳細は `docs/notifications.md`）
   - 制約: 送信元がMacなのでスリープ/電源オフ中は送信されない。常時配信するなら Cloud Functions + Cloud Scheduler（Blazeプラン必須）への移行が必要
 

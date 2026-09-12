@@ -67,7 +67,8 @@
   - **通知**（2層構成。詳細は `docs/notifications.md`）
     - ① 前面通知: 設定不要。60秒interval + `visibilitychange` で予定時刻を監視し、`sw.js` の `showNotification()` で表示。1日1回の制御は `localStorage['daily_notif_log']`
     - ② プッシュ通知: **FCMは使わず標準 Web Push（RFC 8291/8292）**。Firebaseコンソールでのウェブプッシュ証明書発行が不要になるため（コンソール作業は自動化できない）。VAPID鍵はローカル生成し、公開鍵を `index.html` の `VAPID_KEY`、秘密鍵を `vapid.json`（`.gitignore` の `*.json` で除外）に配置。購読は `swReg.pushManager.subscribe()` → `users/{uid}/data/settings.pushSubs` に merge 書き込み（キーは endpoint の SHA-256 先頭12バイト。endpointは `/` を含みFirestoreのマップキーにできないため）。送信は `notify.mjs`（web-push パッケージ）を LaunchAgent で15分おき実行、送信済みフラグは `users/{uid}/data/notifLog`、失効購読(404/410)は自動削除
-    - **設定済み・稼働中**（2026-09-12）。LaunchAgent `com.routine-app.notify` をインストール済み
+    - **設定済み・実機疎通確認済み**（2026-09-12）。LaunchAgent `com.routine-app.notify`（15分おき）をインストール済み。iPhone(iOS 18.7)が `web.push.apple.com` に購読登録され、`node notify.mjs --test` で成功1/失敗0
+    - VAPIDの `sub` クレームは `https://lin-pay.github.io/routine-app/`（URL形式）。**Apple の push サービスで受理されることを実機で確認済み**（mailto にする必要はない）
     - 通知の種類: ☀️朝のまとめ(既定07:30) / ⏰タスクごとの時刻 / 🌙夜の未完了(既定21:00)。予定時刻から45分以内(`NWIN`)に一度だけ発火
     - 前面通知とプッシュは同じ `tag`（am/pm/t<id>）を使うので二重に積み上がらない
   - **継続性機能**
@@ -78,7 +79,8 @@
     - ⚙ 設定ビュー（ヘッダー⚙）: 通知許可・各通知のON/OFFと時刻・テスト通知・アカウント/ログアウト（ログアウトはヘッダーから設定内へ移動）
   - **データモデル追加**: タスクに `time`（"HH:MM" リマインド時刻、任意）、新ドキュメント `users/{uid}/data/settings`（notif設定 + pushTokens）、`users/{uid}/data/notifLog`
   - **バグ修正**: フィットネス「助言」タブのレポート送り矢印が `data-a="rPrev"/"rNext"` でルーティン日付ナビと `switch` の case 衝突を起こし、レポート切替の代わりに日付が動いていた → `repPrev`/`repNext` にリネーム
-  - 統計ロジックはNodeハーネスで検証（ストリーク/最長/達成率/パーフェクトデー/空データ）、UIはheadless Chromeでスクリーンショット確認、28ステップのクリック操作スモークテストをPASS
+  - **Service Worker で HTML をネットワーク優先取得**: GitHub Pages が `Cache-Control: max-age=600` を返すため、デプロイ後10分ほど古いアプリが表示され続ける問題があった（特に iOS のホーム画面アプリ）。`fetch` イベントで `req.mode==='navigate'` のみ `fetch(url,{cache:'no-store'})`、オフライン時のみ `daily-shell-v1` キャッシュにフォールバック。CDPで「ファイル変更→即反映」「オフライン時はキャッシュ」「復帰後は再び最新」を確認
+  - 統計ロジックはNodeハーネスで検証（ストリーク/最長/達成率/パーフェクトデー/空データ）、UIはheadless Chromeでスクリーンショット確認、28ステップのクリック操作スモークテストをPASS、SWのpushハンドラは `ServiceWorker.deliverPushMessage`（CDP）で正常系・不正ペイロードとも確認
   - デプロイ済み: commit `9be229c` を main にpush、GitHub Pages 反映を確認（`sw.js` 200 / index.html に新コード含む）。index.html・sw.js・notify.mjs・plist・docs/notifications.md・project_memory.md のみコミット、palavras関連の未コミット変更は対象外
 
 ### 過去の作業
@@ -108,9 +110,8 @@
   - 未来日へは進めない制限付き
 
 ## 未完了・次にやること
-- **iPhone側での購読作成と実機確認が未完了**: ホーム画面のDailyアイコンからアプリを開くと起動4秒後に自動で購読が作られ `settings.pushSubs` に入る。その後 `node notify.mjs --test` で実機にテスト通知が飛ぶか確認する
-  - 現状 `notify.mjs --dry` は「購読端末なし — スキップ」（アプリ未起動のため）
-- Apple Push（`web.push.apple.com`）に対する VAPID の `sub` クレームは `https://lin-pay.github.io/routine-app/` を使用。Appleのドキュメント上URLもmailtoも可とされているが実機未検証。もし `BadJwtToken` 等で弾かれたら `vapid.json` の `subject` を `mailto:` に変える
+- 特になし（通知は実機まで疎通確認済み）
+- 運用上の注意: 送信元が Mac なのでスリープ／電源オフ中は送信されない（ユーザーは常時起動運用）。launchd はスリープ中の missed job を起床時に実行するが、予定時刻から45分(`NWIN`)以上経っていれば送らない
 
 ## 重要な設計判断・注意点
 - git config (user.name, user.email) はリポジトリローカルに設定（グローバル未変更）

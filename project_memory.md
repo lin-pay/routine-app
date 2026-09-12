@@ -66,8 +66,8 @@
   - 新規ファイル: `sw.js`（Service Worker）、`notify.mjs`（FCMプッシュ送信）、`com.routine-app.notify.plist`（LaunchAgentテンプレート）、`docs/notifications.md`（設定手順）
   - **通知**（2層構成。詳細は `docs/notifications.md`）
     - ① 前面通知: 設定不要。60秒interval + `visibilitychange` で予定時刻を監視し、`sw.js` の `showNotification()` で表示。1日1回の制御は `localStorage['daily_notif_log']`
-    - ② プッシュ通知: `index.html` の `VAPID_KEY` に Firebase の ウェブプッシュ証明書の公開鍵を入れると有効化。端末トークンは `users/{uid}/data/settings.pushTokens` に merge 書き込み。送信は `notify.mjs`（Firebase Admin SDK）を LaunchAgent で15分おき実行、送信済みフラグは `users/{uid}/data/notifLog`
-    - **VAPID_KEY は未設定**。設定するまでは前面通知のみ動作する（設定画面にその旨を表示）
+    - ② プッシュ通知: **FCMは使わず標準 Web Push（RFC 8291/8292）**。Firebaseコンソールでのウェブプッシュ証明書発行が不要になるため（コンソール作業は自動化できない）。VAPID鍵はローカル生成し、公開鍵を `index.html` の `VAPID_KEY`、秘密鍵を `vapid.json`（`.gitignore` の `*.json` で除外）に配置。購読は `swReg.pushManager.subscribe()` → `users/{uid}/data/settings.pushSubs` に merge 書き込み（キーは endpoint の SHA-256 先頭12バイト。endpointは `/` を含みFirestoreのマップキーにできないため）。送信は `notify.mjs`（web-push パッケージ）を LaunchAgent で15分おき実行、送信済みフラグは `users/{uid}/data/notifLog`、失効購読(404/410)は自動削除
+    - **設定済み・稼働中**（2026-09-12）。LaunchAgent `com.routine-app.notify` をインストール済み
     - 通知の種類: ☀️朝のまとめ(既定07:30) / ⏰タスクごとの時刻 / 🌙夜の未完了(既定21:00)。予定時刻から45分以内(`NWIN`)に一度だけ発火
     - 前面通知とプッシュは同じ `tag`（am/pm/t<id>）を使うので二重に積み上がらない
   - **継続性機能**
@@ -108,13 +108,16 @@
   - 未来日へは進めない制限付き
 
 ## 未完了・次にやること
-- **プッシュ通知の有効化（任意）**: Firebase Console → routine-app-5eff3 → プロジェクトの設定 → Cloud Messaging → ウェブプッシュ証明書 で鍵ペアを生成し、`index.html` の `const VAPID_KEY=''` に貼る。その後アプリで通知を許可して端末トークンを登録 → `cp com.routine-app.notify.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ...` で送信を常駐（詳細は `docs/notifications.md`）
-  - 制約: 送信元がMacなのでスリープ/電源オフ中は送信されない。常時配信するなら Cloud Functions + Cloud Scheduler（Blazeプラン必須）への移行が必要
+- **iPhone側での購読作成と実機確認が未完了**: ホーム画面のDailyアイコンからアプリを開くと起動4秒後に自動で購読が作られ `settings.pushSubs` に入る。その後 `node notify.mjs --test` で実機にテスト通知が飛ぶか確認する
+  - 現状 `notify.mjs --dry` は「購読端末なし — スキップ」（アプリ未起動のため）
+- Apple Push（`web.push.apple.com`）に対する VAPID の `sub` クレームは `https://lin-pay.github.io/routine-app/` を使用。Appleのドキュメント上URLもmailtoも可とされているが実機未検証。もし `BadJwtToken` 等で弾かれたら `vapid.json` の `subject` を `mailto:` に変える
 
 ## 重要な設計判断・注意点
 - git config (user.name, user.email) はリポジトリローカルに設定（グローバル未変更）
 - gh CLIは ~/bin/gh にインストール、~/.bashrc にPATH追加済み
 - force pushで既存リポジトリの内容を上書き済み（データはFirestoreなので影響なし）
 - Firebaseサービスアカウントキーは `.gitignore` で除外必須（秘密鍵）
+- `vapid.json`（Web Push の VAPID 鍵ペア）も `.gitignore` の `*.json` で除外。**失うと全端末の購読が無効になり、公開鍵の貼り直し＋再購読が必要**なのでバックアップ推奨
+- 通知の LaunchAgent は `com.routine-app.notify`（15分おき）。`launchctl list | grep routine-app` で確認、ログは `reports/notify.log`
 - スケジュール管理: `launchctl list com.routine-app.fitness-report` で確認。plistは `~/Library/LaunchAgents/com.routine-app.fitness-report.plist`
 - palavras (`lin-pay/palavras`) のローカルクローンは Mac 側には無く、デプロイは VM 側で行う運用。Mac から修正する場合は一時ディレクトリに `git clone https://github.com/lin-pay/palavras.git` してコピー → push → 削除する（gh CLI も Mac には無い）。なお Mac でクローンするとコミット committer が `nagaoka@MacBook-Pro.local` になる点に注意（必要なら `git -C <clone> commit --amend --reset-author` で修正）

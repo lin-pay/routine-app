@@ -275,7 +275,10 @@ const auth=getAuth(fbApp),db=getFirestore(fbApp);
 // ── Constants ──
 const DAYS=['月','火','水','木','金','土','日'],DAY_MAP={1:0,2:1,3:2,4:3,5:4,6:5,0:6};
 const R_ICONS=['✅','💪','📖','🏃','💊','🧘','🎸','💻','🥗','💧','🧹','📝','🛏','🌿','☕','🦷','📧','🎯','🧠','🚿','💤','🍳'];
-const SCHEDULE={1:{type:'workout',label:'筋トレB（ベンチプレス）',w:'B'},2:{type:'run',label:'ランニング（ゾーン3）'},3:{type:'workout',label:'筋トレA（スクワット）',w:'A'},4:{type:'run',label:'ランニング（ゾーン3）'},5:{type:'rest',label:'完全休養'},6:{type:'workout',label:'筋トレC（デッドリフト）',w:'C'},0:{type:'run',label:'ランニング（ロング）'}};
+const SCHEDULE={1:{type:'workout',label:'筋トレB（ベンチプレス）',w:'B'},2:{type:'rest',label:'完全休養'},3:{type:'workout',label:'筋トレA（スクワット）',w:'A'},4:{type:'rest',label:'完全休養'},5:{type:'rest',label:'完全休養'},6:{type:'workout',label:'筋トレC（デッドリフト）',w:'C'},0:{type:'run',label:'ランニング（ロング）'}};
+// 2026-10-23から月水土日のみ（火・木のランは休養に）。それより前の日は旧予定で表示して過去のラン記録を残す
+const SCHEDULE_FROM='2026-10-23',SCHEDULE_OLD={...SCHEDULE,2:{type:'run',label:'ランニング（ゾーン3）'},4:{type:'run',label:'ランニング（ゾーン3）'}};
+function schOf(d){return(fmtD(d)<SCHEDULE_FROM?SCHEDULE_OLD:SCHEDULE)[d.getDay()];}
 const WORKOUTS={
   A:[{id:'squat',name:'バックスクワット',sets:3,reps:'6-8'},{id:'bss',name:'ブルガリアンスプリットスクワット',sets:3,reps:'8-10'},{id:'pullupA',name:'懸垂',sets:3,reps:'限界',bw:true},{id:'core',name:'アブローラー',sets:3,reps:'—',bw:true}],
   B:[{id:'bench',name:'ベンチプレス',sets:3,reps:'6-8'},{id:'ohp',name:'OHP',sets:3,reps:'8-10'},{id:'pullupB',name:'懸垂',sets:3,reps:'限界',bw:true},{id:'dbrow',name:'ダンベルロウ',sets:3,reps:'8-10'}],
@@ -708,7 +711,7 @@ function renderWeek(){
 
 // ── Fitness views ──
 function renderFitness(){
-  const sel=parseD(S.fDate),dow=sel.getDay(),sch=SCHEDULE[dow],isToday=S.fDate===fmtD(new Date());
+  const sel=parseD(S.fDate),dow=sel.getDay(),sch=schOf(sel),isToday=S.fDate===fmtD(new Date());
   const wDates=Object.keys(S.fit.weight).filter(d=>S.fit.weight[d]).sort();
   const latestW=wDates.length?S.fit.weight[wDates[wDates.length-1]]:'—';
   return `<div class="app-inner fit-wrap">
@@ -781,7 +784,7 @@ function renderFSummary(){
   const allEx=[...WORKOUTS.A,...WORKOUTS.B,...WORKOUTS.C];
   const exMap={};const bwMap={};allEx.forEach(e=>{exMap[e.id]=e.name;if(e.bw)bwMap[e.id]=true;});
   for(let i=0;i<7;i++){
-    const d=new Date(ws);d.setDate(d.getDate()+i);const ds=fmtD(d),dow=d.getDay(),sch=SCHEDULE[dow];
+    const d=new Date(ws);d.setDate(d.getDate()+i);const ds=fmtD(d),sch=schOf(d);
     if(S.fit.weight[ds])weights.push(parseFloat(S.fit.weight[ds]));
     if(sch.type==='workout'&&S.fit.workouts[ds]){wkCount++;const w=S.fit.workouts[ds];Object.entries(w).forEach(([exId,data])=>{
       if(bwMap[exId]){for(let s=1;s<=3;s++){const r=parseFloat(data[`s${s}r`]);if(r&&(!bwPrs[exId]||r>bwPrs[exId]))bwPrs[exId]=r;}}
@@ -804,7 +807,7 @@ function renderFSummary(){
 
   html+=`<div class="fit-wd"><div class="fit-pt">日別ログ</div>`;
   for(let i=0;i<7;i++){
-    const d=new Date(ws);d.setDate(d.getDate()+i);const ds=fmtD(d),dow=d.getDay(),sch=SCHEDULE[dow];
+    const d=new Date(ws);d.setDate(d.getDate()+i);const ds=fmtD(d),dow=d.getDay(),sch=schOf(d);
     let done=false;
     if(sch.type==='workout')done=!!S.fit.workouts[ds];
     else if(sch.type==='run')done=!!S.fit.runs[ds]&&!!S.fit.runs[ds].distance;

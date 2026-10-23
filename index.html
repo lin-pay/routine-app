@@ -87,6 +87,7 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .db:active{transform:scale(.92)}
 .ps{display:flex;gap:6px;margin-bottom:10px}
 .psb{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:11px;color:var(--mid);font-family:var(--font);cursor:pointer;font-weight:500}
+.psb.ac{background:var(--aglow);border-color:var(--accent);color:var(--accent)}
 .psb:active{background:var(--sh)}
 .icg{display:flex;flex-wrap:wrap;gap:6px}
 .icb{width:42px;height:42px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -297,7 +298,7 @@ const VAPID_KEY='BDG75Fy7Nbw4yc_0bEaRzcwre870sXZG12s7wFFa_C96QsxPEK0Mc6hcX2QI6va
 // ── State ──
 let S={user:null,authOk:false,dataOk:false,
   // routine
-  tasks:[],comps:{},rView:'home',rDate:fmtD(new Date()),editId:null,pop:null,form:{name:'',days:[0,1,2,3,4,5,6],icon:'✅',time:''},
+  tasks:[],comps:{},rView:'home',rDate:fmtD(new Date()),editId:null,pop:null,form:{name:'',days:[0,1,2,3,4,5,6],icon:'✅',time:'',wk:false},
   // fitness
   fit:{workouts:{},runs:{},weight:{},meals:{}},fDate:fmtD(new Date()),fTab:'log',reports:[],reportIdx:0,
   // settings / notifications
@@ -371,6 +372,40 @@ function toggleComp(id){
 }
 function getStreak(t){let s=0;const d=new Date();if(t.days.includes(DAY_MAP[d.getDay()])&&S.comps[`${fmtD(d)}:${t.id}`])s=1;d.setDate(d.getDate()-1);for(let i=0;i<365;i++){if(t.days.includes(DAY_MAP[d.getDay()])){if(S.comps[`${fmtD(d)}:${t.id}`])s++;else break;}d.setDate(d.getDate()-1);}return s;}
 function rPct(){const t=viewTasks();return t.length?Math.round(t.filter(x=>isComp(x.id)).length/t.length*100):0;}
+
+// ── 週1回（曜日自由）タスク: freq:'week' / days:[]。月〜日のどこかで1回やればその週は完了 ──
+// days が空なので、日単位の表示・統計・通知には入らない
+function isWk(t){return t.freq==='week';}
+function wkStart(ds){const d=parseD(ds);d.setDate(d.getDate()-DAY_MAP[d.getDay()]);return d;}
+function wkDates(ds){const d=wkStart(ds),a=[];for(let i=0;i<7;i++){a.push(fmtD(d));d.setDate(d.getDate()+1);}return a;}
+function wkDoneDay(t,ds){return wkDates(ds).find(s=>S.comps[`${s}:${t.id}`])||null;}
+function toggleWk(id){
+  const t=S.tasks.find(x=>x.id===id);if(!t)return;
+  const was=!!wkDoneDay(t,S.rDate);
+  if(was)wkDates(S.rDate).forEach(s=>delete S.comps[`${s}:${id}`]);else S.comps[`${S.rDate}:${id}`]=Date.now();
+  saveC();
+  if(!was&&isRToday()){const sk=wkStreak(t);if(MILES.indexOf(sk)>=0)celebrate('🔥',`${sk}週連続！`,`${t.icon} ${t.name}`);}
+  render();
+}
+// 連続週数。今週まだなら先週からさかのぼる（今週中は途切れ扱いにしない）
+function wkStreak(t){const d=wkStart(fmtD(new Date()));let n=wkDoneDay(t,fmtD(d))?1:0;for(let i=0;i<HIST_CAP/7;i++){d.setDate(d.getDate()-7);if(wkDoneDay(t,fmtD(d)))n++;else break;}return n;}
+function wkBest(t){
+  const cur=fmtD(wkStart(fmtD(new Date())));let best=0,run=0;
+  for(let d=wkStart(fmtD(new Date(Math.max(t.createdAt?sod(t.createdAt):0,histStart().getTime()))));fmtD(d)<=cur;d.setDate(d.getDate()+7)){
+    if(wkDoneDay(t,fmtD(d))){run++;if(run>best)best=run;}else if(fmtD(d)!==cur)run=0;
+  }
+  return best;
+}
+// 直近 n 週の達成（今週は済んだときだけ数える）
+function wkRate(t,n){
+  let tot=0,done=0;const d=wkStart(fmtD(new Date()));
+  for(let i=0;i<n;i++){
+    const e=new Date(d);e.setDate(e.getDate()+6);
+    if(!t.createdAt||sod(t.createdAt)<=e.getTime()){const ok=!!wkDoneDay(t,fmtD(d));if(i>0||ok){tot++;if(ok)done++;}}
+    d.setDate(d.getDate()-7);
+  }
+  return{pct:tot?Math.round(done/tot*100):0,done,tot};
+}
 function rDateLabel(){const d=rDateObj(),w=DN[d.getDay()];return `${d.getMonth()+1}月${d.getDate()}日（${w}）`;}
 
 // ── 継続性の統計 ──
@@ -569,7 +604,7 @@ function renderBTabs(){return `<div class="btabs"><button class="btab ${S.tab===
 
 // ── Routine views ──
 function renderRHome(){
-  const tasks=viewTasks(),p=rPct(),done=tasks.filter(t=>isComp(t.id)).length,c=2*Math.PI*46;
+  const tasks=viewTasks(),wk=S.tasks.filter(isWk),p=rPct(),done=tasks.filter(t=>isComp(t.id)).length,c=2*Math.PI*46;
   const sorted=[...tasks].sort((a,b)=>(isComp(a.id)?1:0)-(isComp(b.id)?1:0));
   const today=isRToday();
   return `<div class="app-inner">
@@ -577,18 +612,30 @@ function renderRHome(){
     <div class="dn"><button class="dnb" data-a="rPrev">◀</button><div class="dnc"><div class="dnd">${rDateLabel()}${today?'<span class="today-badge">TODAY</span>':''}</div></div>${today?'':'<button class="dnb" data-a="rNext">▶</button>'}<button class="dnb" data-a="rToday" title="今日" style="${today?'opacity:.3;pointer-events:none':''}">●</button></div>
     <div class="pw"><div class="rc"><svg viewBox="0 0 104 104"><defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#E8A842"/><stop offset="100%" stop-color="#D4793A"/></linearGradient></defs><circle cx="52" cy="52" r="46" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/><circle cx="52" cy="52" r="46" fill="none" stroke="url(#rg)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(p/100)*c} ${c}" transform="rotate(-90 52 52)" style="transition:stroke-dasharray .7s cubic-bezier(.4,0,.2,1)"/></svg><div class="rt"><div class="rp">${p}%</div><div class="rs">${done}/${tasks.length}</div></div></div></div>
     ${today&&tasks.length?renderMomentum():''}
-    ${tasks.length===0?`<div class="empty"><div class="ei">${today?'🌱':'📭'}</div><div class="et">${today?'ルーティンを始めましょう':'この日のタスクはありません'}</div><div class="ed">${today?'＋ボタンからタスクを追加':''}</div></div>`:`<div class="tl">${sorted.map((t,i)=>{const d=isComp(t.id),sk=today?getStreak(t):0,co=isCarryover(t.id);return`<div class="tc ${d?'done':''}" style="animation-delay:${i*.04}s;${S.pop===t.id?'z-index:20':''}"><button class="cb ${d?'ck':''}" data-a="toggle" data-id="${t.id}">${d?'✓':''}</button><div class="tb" data-a="toggle" data-id="${t.id}"><div class="tn">${t.icon} ${esc(t.name)}${co?' <span style="font-size:10px;color:var(--accent);font-weight:700;background:var(--aglow);padding:1px 6px;border-radius:4px">昨日</span>':''}</div>${sk>0?`<div class="st${!d&&sk>=7?' risk':''}">${!d&&sk>=7?'⚠️':'🔥'} ${sk}日連続${d?'':` → 今日で${sk+1}日目`}</div>`:''}${metaLine(t,co)}</div>${today?`<button class="mb" data-a="more" data-id="${t.id}">⋯</button>${S.pop===t.id?`<div class="po"><button class="pb edt" data-a="edit" data-id="${t.id}">✏️ 編集</button><button class="pb del" data-a="delete" data-id="${t.id}">🗑 削除</button></div>`:''}`:''}</div>`;}).join('')}</div>`}
+    ${tasks.length===0&&!wk.length?`<div class="empty"><div class="ei">${today?'🌱':'📭'}</div><div class="et">${today?'ルーティンを始めましょう':'この日のタスクはありません'}</div><div class="ed">${today?'＋ボタンからタスクを追加':''}</div></div>`:!tasks.length?'':`<div class="tl">${sorted.map((t,i)=>{const d=isComp(t.id),sk=today?getStreak(t):0,co=isCarryover(t.id);return`<div class="tc ${d?'done':''}" style="animation-delay:${i*.04}s;${S.pop===t.id?'z-index:20':''}"><button class="cb ${d?'ck':''}" data-a="toggle" data-id="${t.id}">${d?'✓':''}</button><div class="tb" data-a="toggle" data-id="${t.id}"><div class="tn">${t.icon} ${esc(t.name)}${co?' <span style="font-size:10px;color:var(--accent);font-weight:700;background:var(--aglow);padding:1px 6px;border-radius:4px">昨日</span>':''}</div>${sk>0?`<div class="st${!d&&sk>=7?' risk':''}">${!d&&sk>=7?'⚠️':'🔥'} ${sk}日連続${d?'':` → 今日で${sk+1}日目`}</div>`:''}${metaLine(t,co)}</div>${today?popMenu(t):''}</div>`;}).join('')}</div>`}
+    ${wk.length?renderWkList(wk,today):''}
   </div>${today?'<button class="fab" data-a="add">＋</button>':''}${S.pop?'<div class="bd" data-a="closepop"></div>':''}`;
+}
+function popMenu(t){return`<button class="mb" data-a="more" data-id="${t.id}">⋯</button>${S.pop===t.id?`<div class="po"><button class="pb edt" data-a="edit" data-id="${t.id}">✏️ 編集</button><button class="pb del" data-a="delete" data-id="${t.id}">🗑 削除</button></div>`:''}`;}
+// 週1回タスクの一覧。表示中の日を含む週（月〜日）で1回やっていれば完了
+function renderWkList(wk,today){
+  const ds=S.rDate,thisWk=fmtD(wkStart(ds))===fmtD(wkStart(fmtD(new Date()))),left=7-DAY_MAP[parseD(ds).getDay()];
+  const rows=wk.map(t=>({t,dd:wkDoneDay(t,ds)})).sort((a,b)=>(a.dd?1:0)-(b.dd?1:0));
+  return`<div class="sec-t">${thisWk?'今週の1回':'この週の1回'}</div><div class="tl">${rows.map(({t,dd},i)=>{
+    const d=!!dd,sk=today?wkStreak(t):0,risk=today&&!d&&left===1&&sk>=2;
+    const sub=d?`${DN[parseD(dd).getDay()]}曜に完了`:today?(left===1?'今日まで':`今週あと${left}日`):'未完了';
+    return`<div class="tc ${d?'done':''}" style="animation-delay:${i*.04}s;${S.pop===t.id?'z-index:20':''}"><button class="cb ${d?'ck':''}" data-a="toggleW" data-id="${t.id}">${d?'✓':''}</button><div class="tb" data-a="toggleW" data-id="${t.id}"><div class="tn">${t.icon} ${esc(t.name)}</div>${sk>0?`<div class="st${risk?' risk':''}">${risk?'⚠️':'🔥'} ${sk}週連続${d?'':` → 今週で${sk+1}週目`}</div>`:''}<div class="td">週1回 · ${sub}</div></div>${today?popMenu(t):''}</div>`;
+  }).join('')}</div>`;
 }
 
 function renderRForm(){
   const e=S.rView==='edit',f=S.form;
   return `<div class="app-inner fv"><div class="stl">${e?'ルーティンを編集':'新しいルーティン'}</div>
     <div class="ig"><label class="il">タスク名</label><input class="ti" id="ni" value="${esc(f.name)}" placeholder="例: 朝のストレッチ" autofocus></div>
-    <div class="ig"><label class="il">繰り返し</label><div class="ps"><button class="psb" data-a="preset" data-v="all">毎日</button><button class="psb" data-a="preset" data-v="wd">平日</button><button class="psb" data-a="preset" data-v="we">週末</button></div><div class="dg">${DAYS.map((d,i)=>`<button class="db ${f.days.includes(i)?'ac':''}" data-a="dayT" data-idx="${i}">${d}</button>`).join('')}</div></div>
-    <div class="ig"><label class="il">リマインド時刻（任意）</label><div style="display:flex;gap:8px;align-items:center"><input class="tmi" type="time" value="${f.time||''}" data-a="fTime" style="flex:1"><button class="psb" data-a="fTimeClear">クリア</button></div><div class="swd" style="margin-top:7px">設定するとこの時刻に通知します（設定 → 通知をON）</div></div>
+    <div class="ig"><label class="il">繰り返し</label><div class="ps"><button class="psb" data-a="preset" data-v="all">毎日</button><button class="psb" data-a="preset" data-v="wd">平日</button><button class="psb" data-a="preset" data-v="we">週末</button><button class="psb ${f.wk?'ac':''}" data-a="preset" data-v="wk">週1回</button></div>${f.wk?`<div class="swd">曜日は決めず、月〜日のどこかで1回やればその週は完了です。月曜にリセットされます（通知はありません）</div>`:`<div class="dg">${DAYS.map((d,i)=>`<button class="db ${f.days.includes(i)?'ac':''}" data-a="dayT" data-idx="${i}">${d}</button>`).join('')}</div>`}</div>
+    ${f.wk?'':`<div class="ig"><label class="il">リマインド時刻（任意）</label><div style="display:flex;gap:8px;align-items:center"><input class="tmi" type="time" value="${f.time||''}" data-a="fTime" style="flex:1"><button class="psb" data-a="fTimeClear">クリア</button></div><div class="swd" style="margin-top:7px">設定するとこの時刻に通知します（設定 → 通知をON）</div></div>`}
     <div class="ig"><label class="il">アイコン</label><div class="icg">${R_ICONS.map(ic=>`<button class="icb ${f.icon===ic?'ac':''}" data-a="icon" data-v="${ic}">${ic}</button>`).join('')}</div></div>
-    <div class="fa"><button class="bc" data-a="cancel">キャンセル</button><button class="bs" data-a="save" ${f.name.trim()&&f.days.length?'':'disabled'}>${e?'保存する':'追加する'}</button></div></div>`;
+    <div class="fa"><button class="bc" data-a="cancel">キャンセル</button><button class="bs" data-a="save" ${f.name.trim()&&(f.wk||f.days.length)?'':'disabled'}>${e?'保存する':'追加する'}</button></div></div>`;
 }
 
 
@@ -613,24 +660,26 @@ function renderMomentum(){
 // ── 継続記録ビュー ──
 function renderStats(){
   const ps=perfectStreak(),bp=bestPerfect(),r7=periodRate(7),r30=periodRate(30);
-  const ranked=S.tasks.map(t=>({t,sk:getStreak(t),bs:bestStreak(t),r:taskRate(t,30)})).sort((a,b)=>b.sk-a.sk||b.r.pct-a.r.pct);
+  // 週1回タスクは週単位（u:'週'）で数え、毎日系の後ろに並べる
+  const ranked=S.tasks.map(t=>isWk(t)?{t,sk:wkStreak(t),bs:wkBest(t),r:wkRate(t,4),u:'週',per:'4週'}:{t,sk:getStreak(t),bs:bestStreak(t),r:taskRate(t,30),u:'日',per:'30日'}).sort((a,b)=>(a.u===b.u?0:a.u==='週'?1:-1)||b.sk-a.sk||b.r.pct-a.r.pct);
+  const dr=ranked.filter(x=>x.u==='日');
   let html=`<div class="app-inner fv"><div class="stl">📊 継続記録</div>
     <div class="sg">
       <div class="sc"><div class="scv">${ps}<small>日</small></div><div class="scl">パーフェクトデー連続</div><div class="scs">自己最高 ${bp}日</div></div>
       <div class="sc"><div class="scv">${r30}<small>%</small></div><div class="scl">達成率（30日）</div><div class="scs">直近7日 ${r7}%</div></div>
       <div class="sc"><div class="scv">${totalDone()}</div><div class="scl">のべ完了タスク</div><div class="scs">${S.tasks.length}件のルーティン</div></div>
-      <div class="sc"><div class="scv">${ranked.length?Math.max(...ranked.map(x=>x.bs)):0}<small>日</small></div><div class="scl">最長ストリーク</div><div class="scs">${ranked.length&&ranked.some(x=>x.bs>0)?esc(ranked.slice().sort((a,b)=>b.bs-a.bs)[0].t.name):'—'}</div></div>
+      <div class="sc"><div class="scv">${dr.length?Math.max(...dr.map(x=>x.bs)):0}<small>日</small></div><div class="scl">最長ストリーク</div><div class="scs">${dr.length&&dr.some(x=>x.bs>0)?esc(dr.slice().sort((a,b)=>b.bs-a.bs)[0].t.name):'—'}</div></div>
     </div>
     <div class="sec-t">達成ヒートマップ（18週）</div>
     ${renderHeatmap(18)}
     <div class="sec-t">タスク別</div>`;
   if(!ranked.length)html+=`<div class="note">ルーティンを追加すると記録が表示されます</div>`;
-  ranked.forEach(({t,sk,bs,r})=>{
+  ranked.forEach(({t,sk,bs,r,u,per})=>{
     const next=MILES.find(m=>m>sk);
     html+=`<div class="tsr">
-      <div class="tsh"><div class="tsn">${t.icon} ${esc(t.name)}</div><div class="tsv">${r.pct}%</div></div>
+      <div class="tsh"><div class="tsn">${t.icon} ${esc(t.name)}${u==='週'?' <span style="font-size:10px;color:var(--dim);font-weight:500">週1回</span>':''}</div><div class="tsv">${r.pct}%</div></div>
       <div class="tsb"><div class="tsf" style="width:${r.pct}%"></div></div>
-      <div class="tsm"><span>🔥 現在 ${sk}日</span><span>🏅 最長 ${bs}日</span><span>${r.done}/${r.tot}回（30日）</span>${next?`<span>次の節目まで ${next-sk}日</span>`:''}</div>
+      <div class="tsm"><span>🔥 現在 ${sk}${u}</span><span>🏅 最長 ${bs}${u}</span><span>${r.done}/${r.tot}回（${per}）</span>${next?`<span>次の節目まで ${next-sk}${u}</span>`:''}</div>
     </div>`;
   });
   html+=`<div class="fa"><button class="bc" data-a="weekBack" style="flex:1">← 戻る</button></div></div>`;
@@ -705,6 +754,8 @@ function renderWeek(){
     }
     html+=`</div>`;
   }
+  const wk=S.tasks.filter(isWk),tds=fmtD(new Date());
+  if(wk.length)html+=`<div class="wk-day"><div class="wk-label"><span>週1回</span><span style="font-size:10px;color:var(--dim)">好きな日に</span></div><div class="wk-tasks">${wk.map(t=>{const dd=wkDoneDay(t,tds);return`<div class="wk-task">${t.icon} ${esc(t.name)}${dd?` <span style="color:var(--accent)">✓ ${DN[parseD(dd).getDay()]}</span>`:''}</div>`;}).join('')}</div></div>`;
   html+=`<div class="fa"><button class="bc" data-a="weekBack" style="flex:1">← 戻る</button></div></div>`;
   return html;
 }
@@ -963,7 +1014,7 @@ function bind(){
   document.querySelectorAll('[data-a]').forEach(el=>{if(el.tagName==='INPUT'||el.tagName==='TEXTAREA')el.addEventListener('change',handleA);});
   document.querySelectorAll('[data-a="fTime"]').forEach(el=>el.addEventListener('input',handleA));
   const ni=document.getElementById('ni');
-  if(ni)ni.addEventListener('input',e=>{S.form.name=e.target.value;const b=document.querySelector('[data-a="save"]');if(b)b.disabled=!(S.form.name.trim()&&S.form.days.length);});
+  if(ni)ni.addEventListener('input',e=>{S.form.name=e.target.value;const b=document.querySelector('[data-a="save"]');if(b)b.disabled=!(S.form.name.trim()&&(S.form.wk||S.form.days.length));});
 }
 
 function handleA(e){
@@ -974,11 +1025,12 @@ function handleA(e){
     case 'switchTab':S.tab=v;S.rView='home';S.rDate=fmtD(new Date());S.pop=null;render();break;
     // Routine
     case 'toggle':toggleComp(id);break;
+    case 'toggleW':toggleWk(id);break;
     case 'more':e.stopPropagation();S.pop=S.pop===id?null:id;render();break;
     case 'closepop':S.pop=null;render();break;
     case 'delete':S.tasks=S.tasks.filter(t=>t.id!==id);S.pop=null;saveR();toast('削除しました');break;
-    case 'edit':{const tk=S.tasks.find(t=>t.id===id);if(tk){S.form={name:tk.name,days:[...tk.days],icon:tk.icon,time:tk.time||''};S.editId=id;S.rView='edit';S.pop=null;render();}}break;
-    case 'add':S.form={name:'',days:[0,1,2,3,4,5,6],icon:'✅',time:''};S.rView='add';render();break;
+    case 'edit':{const tk=S.tasks.find(t=>t.id===id);if(tk){S.form={name:tk.name,days:[...tk.days],icon:tk.icon,time:tk.time||'',wk:isWk(tk)};S.editId=id;S.rView='edit';S.pop=null;render();}}break;
+    case 'add':S.form={name:'',days:[0,1,2,3,4,5,6],icon:'✅',time:'',wk:false};S.rView='add';render();break;
     case 'rPrev':{const d=rDateObj();d.setDate(d.getDate()-1);S.rDate=fmtD(d);render();}break;
     case 'rNext':{const d=rDateObj();d.setDate(d.getDate()+1);if(fmtD(d)<=fmtD(new Date())){S.rDate=fmtD(d);}render();}break;
     case 'rToday':S.rDate=fmtD(new Date());render();break;
@@ -998,13 +1050,15 @@ function handleA(e){
     case 'testNotif':fire('🔔 テスト通知','この見た目で届きます','test');toast('送信しました');break;
     case 'weekBack':S.rView='home';render();break;
     case 'cancel':S.rView='home';S.editId=null;render();break;
-    case 'save':
-      if(!S.form.name.trim()||!S.form.days.length)return;
-      if(S.rView==='edit'&&S.editId){const t=S.tasks.find(t=>t.id===S.editId);if(t){t.name=S.form.name.trim();t.days=[...S.form.days];t.icon=S.form.icon;t.time=S.form.time||'';}}
-      else S.tasks.push({id:'t_'+Date.now(),name:S.form.name.trim(),days:[...S.form.days],icon:S.form.icon,time:S.form.time||'',createdAt:Date.now()});
-      saveR();S.rView='home';S.editId=null;toast('保存しました');break;
+    case 'save':{
+      const f=S.form;if(!f.name.trim()||!(f.wk||f.days.length))return;
+      // 週1回は曜日なし・通知なし。Firestore は undefined を受け付けないので freq は消して戻す
+      const days=f.wk?[]:[...f.days],time=f.wk?'':f.time||'';
+      if(S.rView==='edit'&&S.editId){const t=S.tasks.find(t=>t.id===S.editId);if(t){t.name=f.name.trim();t.days=days;t.icon=f.icon;t.time=time;if(f.wk)t.freq='week';else delete t.freq;}}
+      else S.tasks.push({id:'t_'+Date.now(),name:f.name.trim(),days,icon:f.icon,time,createdAt:Date.now(),...(f.wk?{freq:'week'}:{})});
+      saveR();S.rView='home';S.editId=null;toast('保存しました');}break;
     case 'dayT':{const idx=parseInt(el.dataset.idx),i=S.form.days.indexOf(idx);if(i>=0)S.form.days.splice(i,1);else S.form.days.push(idx);S.form.days.sort((a,b)=>a-b);render();}break;
-    case 'preset':{const map={all:[0,1,2,3,4,5,6],wd:[0,1,2,3,4],we:[5,6]};S.form.days=map[v];render();}break;
+    case 'preset':{const map={all:[0,1,2,3,4,5,6],wd:[0,1,2,3,4],we:[5,6]};if(v==='wk')S.form.wk=true;else{S.form.wk=false;S.form.days=map[v];}render();}break;
     case 'icon':S.form.icon=v;render();break;
     // Fitness
     case 'dPrev':{const d=parseD(S.fDate);d.setDate(d.getDate()-1);S.fDate=fmtD(d);render();}break;

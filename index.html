@@ -291,6 +291,7 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .gq-c:active{transform:scale(.92)}
 .gq-c.ok{background:rgba(74,222,128,.16);border-color:#4ade80;color:#4ade80}
 .gq-c.ng{background:rgba(224,82,82,.16);border-color:var(--danger);color:var(--danger)}
+.gq-c.sel{background:var(--aglow);border-color:var(--accent);color:var(--accent);font-weight:700}
 .gq-c:disabled{cursor:default}
 .gq-fb{font-size:14px;font-weight:700;text-align:center;padding:10px;border-radius:10px;margin-bottom:10px}
 .gq-fb.ok{color:#4ade80;background:rgba(74,222,128,.08)}
@@ -751,6 +752,12 @@ function gTestAdd(q){
   S.gP.tests=[...S.gP.tests,{set:q.set,d:fmtD(new Date()),c,n:ans.length,sec:Math.round(q.el/1000)}].slice(-60);saveG();
   return{c,n:ans.length};
 }
+// 選択肢を押すと仮選択（選び直せる）。「確定」で gAnswer が採点して記録する
+function gSel(c){
+  const q=S.gQ;if(!q||q.pick[q.keys[q.i]]||q.tmp===c)return;
+  q.tmp=c;if(q.mode==='set'){gTick(q);gRunSave(q);}
+  render();
+}
 function gAnswer(c){
   const q=S.gQ;if(!q)return;const k=q.keys[q.i],f=gFind(k);if(!f||q.pick[k])return;
   q.pick[k]=c;const ok=gRight(f.q,c);
@@ -761,7 +768,7 @@ function gAnswer(c){
 }
 function gNext(){
   const q=S.gQ;if(!q)return;
-  if(q.i<q.keys.length-1){q.i++;if(q.mode==='set'){gTick(q);gRunSave(q);}S.gZoom=false;render();gPrefetch();document.getElementById('app').scrollTop=0;}
+  if(q.i<q.keys.length-1){q.i++;q.tmp=null;if(q.mode==='set'){gTick(q);gRunSave(q);}S.gZoom=false;render();gPrefetch();document.getElementById('app').scrollTop=0;}
   else gFinish();
 }
 function gFinish(){
@@ -788,11 +795,12 @@ function gjLen(s){return[...(s||'')].filter(c=>c!=='\n').length;}
 // 通しの時計は画面に出ている間だけ進める。表示は15秒ごとに時計の文字だけ書き換える（問題の画像は描き直さない）
 document.addEventListener('visibilitychange',()=>{const q=S.gQ;if(!q||q.mode!=='set'||S.gView!=='quiz')return;if(document.hidden){gTick(q);q.ta=null;gRunSave(q);}else if(!q.ta)q.ta=Date.now();});
 setInterval(()=>{const e=document.getElementById('gTm');if(e&&S.gQ&&S.gQ.mode==='set')e.textContent=`⏱ ${gHM(gEl(S.gQ))}`;},15000);
-// PC: 数字キー 1〜5 で解答、Enter・→ で次へ（入力欄にいるときと、修飾キー付きは使わない）
+// PC: 数字キー 1〜5 で仮選択、Enter で確定・次へ、→ で次へ（入力欄にいるときと、修飾キー付きは使わない）
 document.addEventListener('keydown',e=>{
   const q=S.gQ;if(S.tab!=='study'||S.gView!=='quiz'||!q||e.metaKey||e.ctrlKey||e.altKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;
   const pk=q.pick[q.keys[q.i]];
-  if(!pk&&/^[1-5]$/.test(e.key)){e.preventDefault();gAnswer(+e.key);}
+  if(!pk&&/^[1-5]$/.test(e.key)){e.preventDefault();gSel(+e.key);}
+  else if(!pk&&q.tmp&&e.key==='Enter'){e.preventDefault();gAnswer(q.tmp);}
   else if(pk&&(e.key==='Enter'||e.key==='ArrowRight')){e.preventDefault();gNext();}
 });
 
@@ -1049,9 +1057,10 @@ function renderGQuiz(){
     <div class="gq-top"><button class="hbtn" data-a="gQuit" title="やめる">✕</button><div class="gq-tt"><div class="gq-t1">${esc(q.title)}<span>${q.i+1} / ${q.keys.length}</span>${q.mode==='set'?`<span id="gTm">⏱ ${gHM(gEl(q))}</span>`:''}</div><div class="gq-t2">${esc(lab)}${hist?` ・ これまで ${hist.replace(/o/g,'○').replace(/x/g,'×')}`:''}</div></div><button class="hbtn" data-a="gOrig" title="白黒を反転">◐</button></div>
     <div class="tsb" style="margin:0 0 12px"><div class="tsf" style="width:${Math.round((q.i+(pk?1:0))/q.keys.length*100)}%"></div></div>
     <div class="gq-body"><div class="gq-l">${img}</div><div class="gq-r">
-    <div class="gq-cs">${[1,2,3,4,5].map(n=>`<button class="gq-c${pk?(gRight(f.q,n)?' ok':n===pk?' ng':''):''}" data-a="gAns" data-v="${n}" ${pk?'disabled':''}>${CIRC[n-1]}</button>`).join('')}</div>
-    ${pk?`<div class="gq-fb ${ok?'ok':'ng'}">${ok?'⭕ 正解':'❌ 不正解'}　正解は ${gAnsStr(f.q)}${Array.isArray(f.q.a)?'（どれも正解扱い）':''}</div><button class="bs gq-next" data-a="gNext">${q.i<q.keys.length-1?'次へ ▶':'結果を見る'}</button>`:''}
-    <div class="gq-kb">キーボード: 1〜5 で解答、Enter で次へ</div>
+    <div class="gq-cs">${[1,2,3,4,5].map(n=>`<button class="gq-c${pk?(gRight(f.q,n)?' ok':n===pk?' ng':''):n===q.tmp?' sel':''}" data-a="gAns" data-v="${n}" ${pk?'disabled':''}>${CIRC[n-1]}</button>`).join('')}</div>
+    ${pk?`<div class="gq-fb ${ok?'ok':'ng'}">${ok?'⭕ 正解':'❌ 不正解'}　正解は ${gAnsStr(f.q)}${Array.isArray(f.q.a)?'（どれも正解扱い）':''}</div><button class="bs gq-next" data-a="gNext">${q.i<q.keys.length-1?'次へ ▶':'結果を見る'}</button>`
+      :`<button class="bs gq-next" data-a="gConfirm" ${q.tmp?'':'disabled'}>${q.tmp?`${CIRC[q.tmp-1]} で確定`:'選んでから確定'}</button>`}
+    <div class="gq-kb">キーボード: 1〜5 で選ぶ、Enter で確定・次へ</div>
     <div class="gq-foot"><a href="${f.s.pdf}#page=${f.q.p}" target="_blank" rel="noopener">原本PDF（日本技術士会）${f.q.p}ページ ↗</a></div>
     </div></div>
   </div>`;
@@ -1419,7 +1428,8 @@ function handleA(e){
       gStart('set',gKeysOf(s),`${s.yl} ${G_SUBJ[s.s]}`,s.id);}break;
     case 'gResume':{const r=gRunGet();if(r)gResume(r);}break;
     case 'gRunEnd':{const r=gRunGet();if(!r)break;if(Object.keys(r.pick).length){S.gQ={...r,ta:null};delete S.gQ.uid;gFinish();}else{gRunClear();render();}}break;
-    case 'gAns':gAnswer(parseInt(v,10));break;
+    case 'gAns':gSel(parseInt(v,10));break;
+    case 'gConfirm':{const q=S.gQ;if(q&&q.tmp)gAnswer(q.tmp);}break;
     case 'gNext':gNext();break;
     case 'gQuit':{const q=S.gQ;if(!q)break;const n=Object.keys(q.pick).length;
       // 年度別の通しは✕で中断（ホームの「続きから」で再開）。ほかは答えた分だけ採点

@@ -316,6 +316,12 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 button.gq-ri{font-family:var(--font);cursor:pointer}
 .gx-t{font-size:12.5px;line-height:1.8;white-space:pre-wrap;color:var(--text)}
 .gx-t b{color:var(--accent)}
+.wp-new{font-size:10px;color:var(--accent);font-weight:700;margin-left:4px}
+.wp-l{display:flex;gap:6px;margin-top:10px}
+.wp-l a{flex:1;text-align:center;padding:9px 4px;border-radius:9px;background:var(--aglow);border:1px solid rgba(232,168,66,.25);color:var(--accent);font-size:12px;font-weight:700;text-decoration:none}
+.wp-c{display:flex;flex-direction:column;margin-top:8px}
+.wp-c a{padding:10px 2px;border-top:1px solid var(--border);color:var(--text);font-size:12px;text-decoration:none;line-height:1.5}
+.wp-c a::after{content:' ↗';color:var(--dim)}
 .gq-ms{display:flex;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px}
 .gq-ms:last-child{border-bottom:none}
 .gq-md{width:96px;flex-shrink:0;color:var(--mid);font-size:11px}
@@ -378,6 +384,15 @@ const G_RUN='g_run';             // 途中の通しを端末（localStorage）�
 const G_TAGS=['専門的学識','問題解決','マネジメント','評価','コミュニケーション','リーダーシップ','技術者倫理','継続研さん'];
 const GJ_F=[['title','タイトル','例: 低肥料試験区の設計と評価',0],['when','時期','例: 2024年3月〜2025年2月',0],['role','立場と役割','例: 試験の設計と取りまとめ。現地スタッフ3人に指示',1],['issue','課題（何が問題だったか）','',1],['choice','比べた選択肢と、それを選んだ理由','',1],['result','結果（数字）と、残ったもの','',1]];
 const CIRC='①②③④⑤';
+// 一次試験の正答（日本技術士会。番号の一覧だけで、解説はない）。年度ごとの PDF の番号と、科目のページ（どの年度も同じ）
+const G_ANS={R7:4,R6:5,R5:6,R4:7,R3:8,R2:9,R1b:10,R1:11},G_ANSP={kiso:1,tekisei:2,shinrin:15};
+// 森林・林業白書（林野庁、毎年6月はじめに公表）。新しい年度が出たら先頭に足す。全文 HTML の章のページ名は年度が変わっても同じ
+const G_WP=[
+  {y:'令和7年度',d:'2026年6月',p:'r7',t:'森林資源の循環利用の確立に向けて～木材利用と再造林をつなぐ～'},
+  {y:'令和6年度',d:'2025年6月',p:'r6',t:'生物多様性を高める林業経営と木材利用'},
+  {y:'令和5年度',d:'2024年6月',p:'r5',t:'花粉と森林'}];
+const WP_URL='https://www.rinya.maff.go.jp/j/kikaku/hakusyo/';
+const WP_CH=[['tokusyu','特集'],['topics','トピックス'],['chap1','第1章 森林の整備・保全'],['chap2','第2章 林業と山村（中山間地域）'],['chap3','第3章 木材需給・利用と木材産業'],['chap4','第4章 国有林野の管理経営'],['chap5','第5章 東日本大震災からの復興']];
 
 // ── State ──
 let S={user:null,authOk:false,dataOk:false,
@@ -688,6 +703,7 @@ function gFind(k){if(gMapSrc!==S.gIdx){gMap={};gSets().forEach(s=>s.qs.forEach(q
 function gOk(q){return Array.isArray(q.a)?q.a.length>0:q.a>0;}
 function gRight(q,c){return Array.isArray(q.a)?q.a.includes(c):q.a===c;}
 function gAnsStr(q){return(Array.isArray(q.a)?q.a:[q.a]).map(n=>CIRC[n-1]).join('・');}
+function gAnsUrl(s){const n=G_ANS[s.y];return n?`https://www.engineer.or.jp/c_topics/004/attached/attach_4106_${n}.pdf#page=${G_ANSP[s.s]}`:'';}
 function gKeysOf(s){return s.qs.filter(gOk).map(q=>q.k);}
 function gAll(){return gSets().flatMap(gKeysOf);}
 function gDays(ds){return Math.round((parseD(ds)-parseD(fmtD(new Date())))/864e5);}
@@ -1011,13 +1027,14 @@ function renderStudy(){
   if(S.gView==='done'&&S.gQ&&S.gQ.result)return renderGDone();
   if(S.gView==='jform'&&S.gJE)return renderGJForm();
   if(S.gView==='jlist')return renderGJList();
+  if(S.gView==='wp')return renderGWP();
   return renderGHome();
 }
 function gMd(ds,from){const d=parseD(ds);return(from&&parseD(from).getFullYear()===d.getFullYear()?'':`${d.getFullYear()}/`)+`${d.getMonth()+1}/${d.getDate()}`;}
 function renderGHome(){
   const td=fmtD(new Date()),ex=G_MILES.find(m=>m.exam);
   let h=`<div class="app-inner fv">
-    <div class="header"><div><div class="date-label">技術士 第一次試験まで${G_EST?'（予定）':''}</div><div class="greeting">あと ${gDays(ex.d)} 日</div></div><div style="display:flex;gap:6px"><button class="hbtn" data-a="gJList" title="業務記録">📝</button></div></div>`;
+    <div class="header"><div><div class="date-label">技術士 第一次試験まで${G_EST?'（予定）':''}</div><div class="greeting">あと ${gDays(ex.d)} 日</div></div><div style="display:flex;gap:6px"><button class="hbtn" data-a="gWP" title="森林・林業白書">📗</button><button class="hbtn" data-a="gJList" title="業務記録">📝</button></div></div>`;
   if(!gSets().length)h+=`<div class="note">過去問のデータがまだ入っていません。</div>`;
   else{
     const st=gStats(),dk=gDailyKeys(),dueN=dk.filter(k=>S.gP.q[k]).length,newN=dk.length-dueN,weak=gWeak().length;
@@ -1035,6 +1052,8 @@ function renderGHome(){
     ${renderGGrid()}`;
   }
   h+=`<div class="sec-t">業務記録（二次試験の材料）</div>${renderGJSummary()}
+    <div class="sec-t">森林・林業白書（二次試験の柱）</div>
+    <div class="tsr gj-item" data-a="gWP"><div class="tsh"><div class="tsn">📗 ${G_WP[0].y} 森林・林業白書</div><div class="tsv" style="font-size:12px">開く ›</div></div><div class="tsm"><span>特集・第1〜5章・概要・検索</span><span>${G_WP.length}年度分</span></div></div>
     <div class="sec-t">日程${G_EST?'（令和9年度以降は例年からの推定）':''}</div>
     <div class="hmwrap">${G_MILES.map(m=>{const past=(m.e||m.d)<td,dd=gDays(m.d);return`<div class="gq-ms${past?' past':''}"><div class="gq-md">${gMd(m.d)}${m.e?'〜'+gMd(m.e,m.d):''}</div><div class="gq-mt">${esc(m.t)}${G_EST?' <span style="font-size:10px;color:var(--dim)">予定</span>':''}</div><div class="gq-mc">${past?'済':dd>0?`あと${dd}日`:'期間中'}</div></div>`;}).join('')}</div>
     <div class="note">試験はすべて日本国内（一次は17都道府県、二次の筆記は12都道府県、口頭は東京）。</div>
@@ -1077,7 +1096,7 @@ function renderGQuiz(){
     ${pk?`<div class="gq-fb ${ok?'ok':'ng'}">${ok?'⭕ 正解':'❌ 不正解'}　正解は ${gAnsStr(f.q)}${Array.isArray(f.q.a)?'（どれも正解扱い）':''}</div><button class="bs gq-next" data-a="gNext">${q.i<q.keys.length-1?'次へ ▶':'結果を見る'}</button>`
       :`<button class="bs gq-next" data-a="gConfirm" ${q.tmp?'':'disabled'}>${q.tmp?`${CIRC[q.tmp-1]} で確定`:'選んでから確定'}</button>`}
     <div class="gq-kb">キーボード: 1〜5 で選ぶ、Enter で確定・次へ</div>
-    <div class="gq-foot"><a href="${f.s.pdf}#page=${f.q.p}" target="_blank" rel="noopener">原本PDF（日本技術士会）${f.q.p}ページ ↗</a></div>
+    <div class="gq-foot"><a href="${f.s.pdf}#page=${f.q.p}" target="_blank" rel="noopener">原本PDF（日本技術士会）${f.q.p}ページ ↗</a>${pk&&gAnsUrl(f.s)?`<br><a href="${gAnsUrl(f.s)}" target="_blank" rel="noopener">正答の原本（日本技術士会）↗</a>`:''}</div>
     </div></div>
   </div>`;
 }
@@ -1095,7 +1114,7 @@ function renderGDone(){
     <div class="gq-rl">${ans.map(k=>{const f=gFind(k),o=gRight(f.q,q.pick[k]),lb=`${o?'○':'×'} ${esc(f.s.ys)} ${G_SUBJ[f.s.s]} ${f.q.no}`;return o&&!(q.xs||[]).includes(k)?`<button class="gq-ri ok" data-a="gXShow" data-v="${k}">${lb}</button>`:`<span class="gq-ri ${o?'ok':'ng'}">${lb}</span>`;}).join('')}</div>
     ${ans.length>wr.length?`<div class="scs" style="margin:-8px 0 14px">○ の問題も、押すと解説を出せます（勘で当たった問題など）</div>`:''}
     ${wr.length?`<button class="pbtn" data-a="gRetry">🔁 間違えた${wr.length}問をもう一度</button>`:''}
-    ${(q.xs||[]).length?`<div class="sec-t">解説</div>${q.xs.map(k=>renderGX(q,k)).join('')}<div class="note">Claude（AI）が Mac で作った解説です。誤りがありえるので、気になるところは原本や白書で確かめてください。</div>`:''}
+    ${(q.xs||[]).length?`<div class="sec-t">解説</div>${q.xs.map(k=>renderGX(q,k)).join('')}<div class="note">Claude（AI）が Mac で作った解説です。誤りがありえるので、気になるところは原本や<a href="${WP_URL}${G_WP[0].p}hakusyo/search.html" target="_blank" rel="noopener" style="color:var(--accent)">白書の検索 ↗</a>で確かめてください。公式に出ているのは正答の番号だけで、解説はありません。</div>`:''}
     <div class="fa"><button class="bc" data-a="gHome" style="flex:1">← 戻る</button></div></div>`;
 }
 function renderGX(q,k){
@@ -1106,7 +1125,17 @@ function renderGX(q,k){
     :x&&x.s==='err'&&!q.asked[k]?'<div class="swd">解説を作れませんでした。</div><button class="psb" data-a="gXReq" data-v="'+k+'" style="margin-top:8px">もう一度頼む</button>'
     :o&&!q.asked[k]?'<button class="psb" data-a="gXReq" data-v="'+k+'">解説を頼む</button>'
     :'<div class="swd">解説を待っています（Mac で1問ずつ作ります。1問15秒ほど）</div>';
-  return`<div class="tsr gx"><div class="tsh"><div class="tsn">${o?'○':'×'} ${esc(f.s.ys)} ${G_SUBJ[f.s.s]} ${f.q.no}</div><div class="tsv" style="font-size:11px">${pk?`あなた ${CIRC[pk-1]} ・ `:''}正答 ${gAnsStr(f.q)}</div></div><div style="margin-top:8px">${body}</div><div class="gq-foot" style="text-align:left;margin-top:8px"><a href="${f.s.pdf}#page=${f.q.p}" target="_blank" rel="noopener">原本PDF（日本技術士会）${f.q.p}ページ ↗</a></div></div>`;
+  return`<div class="tsr gx"><div class="tsh"><div class="tsn">${o?'○':'×'} ${esc(f.s.ys)} ${G_SUBJ[f.s.s]} ${f.q.no}</div><div class="tsv" style="font-size:11px">${pk?`あなた ${CIRC[pk-1]} ・ `:''}正答 ${gAnsStr(f.q)}</div></div><div style="margin-top:8px">${body}</div><div class="gq-foot" style="text-align:left;margin-top:8px;line-height:1.9"><a href="${f.s.pdf}#page=${f.q.p}" target="_blank" rel="noopener">原本PDF（日本技術士会）${f.q.p}ページ ↗</a>${gAnsUrl(f.s)?`<br><a href="${gAnsUrl(f.s)}" target="_blank" rel="noopener">正答の原本（日本技術士会）↗</a>`:''}</div></div>`;
+}
+// 森林・林業白書: 年度ごとに概要・全文・検索・PDF と、全文（HTML 版）の章へのリンク。どれも林野庁のサイトを開く
+function renderGWP(){
+  const L=(u,t)=>`<a href="${u}" target="_blank" rel="noopener">${t}</a>`;
+  return`<div class="app-inner fv"><div class="stl">📗 森林・林業白書</div>
+    <div class="note" style="margin:-8px 0 14px">林野庁が毎年6月はじめに公表。二次試験の必須科目は日本の森林・林業の課題から出るので、直近2〜3年の白書（特に特集と第1〜3章）が柱。リンクは林野庁のサイトを開きます。</div>
+    ${G_WP.map((w,i)=>{const b=`${WP_URL}${w.p}hakusyo`;return`<div class="tsr"><div class="tsh"><div class="tsn">${w.y}${i?'':' <span class="wp-new">最新</span>'}</div><div class="tsv" style="font-size:11px">${w.d} 公表</div></div>
+      <div class="wp-l">${L(b+'_h/summary/index.html','概要')}${L(b+'_h/all/index.html','全文')}${L(b+'/search.html','検索')}${L(b+'/zenbun.html','PDF')}</div>
+      <div class="wp-c">${WP_CH.map(([f,n])=>L(`${b}_h/all/${f}.html`,f==='tokusyu'?`特集 ${esc(w.t)}`:n)).join('')}</div></div>`;}).join('')}
+    <div class="fa"><button class="bc" data-a="gHome" style="flex:1">← 戻る</button></div></div>`;
 }
 function escA(s){return esc(s).replace(/"/g,'&quot;');}
 function renderGJList(){
@@ -1471,6 +1500,7 @@ function handleA(e){
     case 'gOrig':S.gOrig=!S.gOrig;render();break;
     case 'gRetryImg':{const k=S.gQ&&S.gQ.keys[S.gQ.i];if(k){delete S.gImg[k];gLoadImg(k);render();}}break;
     case 'gJList':S.gView='jlist';render();document.getElementById('app').scrollTop=0;break;
+    case 'gWP':S.gView='wp';render();document.getElementById('app').scrollTop=0;break;
     case 'gJNew':S.gJE={title:'',when:'',role:'',issue:'',choice:'',result:'',tags:[],sum:''};S.gView='jform';render();document.getElementById('app').scrollTop=0;break;
     case 'gJEdit':{const j=S.gJ.find(x=>x.id===id);if(j){S.gJE=JSON.parse(JSON.stringify(j));if(!S.gJE.tags)S.gJE.tags=[];S.gView='jform';render();document.getElementById('app').scrollTop=0;}}break;
     case 'gjf':if(S.gJE)S.gJE[el.dataset.f]=el.value;break;

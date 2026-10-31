@@ -313,6 +313,9 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .gq-ri{font-size:11px;padding:4px 8px;border-radius:6px;background:var(--surface);border:1px solid var(--border)}
 .gq-ri.ok{color:#4ade80}
 .gq-ri.ng{color:#F0A090}
+button.gq-ri{font-family:var(--font);cursor:pointer}
+.gx-t{font-size:12.5px;line-height:1.8;white-space:pre-wrap;color:var(--text)}
+.gx-t b{color:var(--accent)}
 .gq-ms{display:flex;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px}
 .gq-ms:last-child{border-bottom:none}
 .gq-md{width:96px;flex-shrink:0;color:var(--mid);font-size:11px}
@@ -385,7 +388,7 @@ let S={user:null,authOk:false,dataOk:false,
   // settings / notifications
   settings:defSettings(),
   // 技術士: 過去問の索引・解いた記録・業務記録、ドリル中の状態、問題画像のキャッシュ
-  gIdx:null,gP:{q:{},days:{},tests:[]},gJ:[],gView:'home',gQ:null,gImg:{},gJE:null,gZoom:false,gOrig:false,
+  gIdx:null,gP:{q:{},days:{},tests:[]},gJ:[],gView:'home',gQ:null,gImg:{},gJE:null,gZoom:false,gOrig:false,gX:{},gXU:{},
   // global
   tab:'routine',toast:null,cele:null,unsub:[]};
 let toastT,celeT;
@@ -420,7 +423,7 @@ async function saveS(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'dat
 async function saveG(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','gprog'),S.gP);}catch(e){console.error(e);}}
 async function saveJ(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','gjournal'),{items:S.gJ});}catch(e){console.error(e);}}
 
-onAuthStateChanged(auth,u=>{S.user=u;S.authOk=true;if(u)startSync(u.uid);else{S.dataOk=false;S.tasks=[];S.comps={};S.fit={workouts:{},runs:{},weight:{},meals:{}};S.settings=defSettings();S.gIdx=null;S.gP={q:{},days:{},tests:[]};S.gJ=[];S.gQ=null;S.gImg={};S.gView='home';render();}});
+onAuthStateChanged(auth,u=>{S.user=u;S.authOk=true;if(u)startSync(u.uid);else{S.dataOk=false;S.tasks=[];S.comps={};S.fit={workouts:{},runs:{},weight:{},meals:{}};S.settings=defSettings();S.gIdx=null;S.gP={q:{},days:{},tests:[]};S.gJ=[];S.gQ=null;S.gImg={};gXStop();S.gX={};S.gView='home';render();}});
 getRedirectResult(auth).catch(()=>{});
 async function login(){const p=new GoogleAuthProvider();try{await signInWithPopup(auth,p);}catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/popup-closed-by-user')await signInWithRedirect(auth,p);}}
 async function logout(){S.unsub.forEach(u=>u());S.unsub=[];await signOut(auth);}
@@ -733,6 +736,7 @@ async function gLoadImg(k){
 function gPrefetch(){const q=S.gQ;if(q){gLoadImg(q.keys[q.i]);gLoadImg(q.keys[q.i+1]);}}
 function gStart(mode,keys,title,set){
   if(!keys.length){toast('出せる問題がありません');return;}
+  gXStop();
   S.gQ={mode,title,set:set||null,keys,i:0,pick:{}};S.gView='quiz';S.gZoom=false;
   if(mode==='set'){S.gQ.el=0;S.gQ.ta=Date.now();gRunSave(S.gQ);}
   render();gPrefetch();document.getElementById('app').scrollTop=0;
@@ -774,7 +778,19 @@ function gNext(){
 function gFinish(){
   const q=S.gQ,ans=q.keys.filter(k=>q.pick[k]),c=ans.filter(k=>gRight(gFind(k).q,q.pick[k])).length;
   if(q.mode==='set'){gTick(q);q.ta=null;gRunClear();gTestAdd(q);}
-  q.result={c,n:ans.length};S.gView='done';render();document.getElementById('app').scrollTop=0;
+  q.result={c,n:ans.length};q.xs=ans.filter(k=>!gRight(gFind(k).q,q.pick[k]));q.asked={};gXWatch(q.xs);
+  S.gView='done';render();document.getElementById('app').scrollTop=0;
+}
+// 解説: 間違えた問題は Mac の gexplain.mjs が Claude で作り、users/{uid}/gx/{k} に置く。結果画面ではそれを見張って、できしだい出す
+// 正解した問題は、結果画面で押すと出す（まだ無ければ data/gxreq で頼む）
+function gXWatch(keys){
+  if(!S.user)return;
+  keys.forEach(k=>{if(S.gXU[k])return;S.gXU[k]=onSnapshot(doc(db,'users',S.user.uid,'gx',k),s=>{S.gX[k]=s.exists()?s.data():null;if(S.gView==='done')render();},()=>{});});
+}
+function gXStop(){Object.values(S.gXU).forEach(u=>{try{u();}catch(e){}});S.gXU={};}
+async function gXReq(k){
+  const q=S.gQ;if(!S.user||!q)return;q.asked[k]=1;render();
+  try{await setDoc(doc(db,'users',S.user.uid,'data','gxreq'),{q:{[k]:Date.now()}},{merge:true});}catch(e){q.asked[k]=0;toast('頼めませんでした');}
 }
 // 今日 G_GOAL 問に達したら、ルーティンの「技術士」（link:'gq'）に✓を付ける
 function gAutoTask(){
@@ -1076,9 +1092,21 @@ function renderGDone(){
     <div class="pw"><div class="rc"><svg viewBox="0 0 104 104"><circle cx="52" cy="52" r="46" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/><circle cx="52" cy="52" r="46" fill="none" stroke="${pct>=50?'#4ade80':'#E8A842'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${pct/100*c} ${c}" transform="rotate(-90 52 52)"/></svg><div class="rt"><div class="rp">${pct}%</div><div class="rs">${r.c}/${r.n}</div></div></div></div>
     <div class="scs" style="text-align:center;margin:-10px 0 6px">${r.n<q.keys.length?`${q.keys.length}問中 ${r.n}問に解答 ・ `:''}合格ラインは各科目50%</div>
     ${R?`<div class="note" style="margin-top:4px">${R.t}${grp}${tm}</div>`:''}
-    <div class="gq-rl">${ans.map(k=>{const f=gFind(k),o=gRight(f.q,q.pick[k]);return`<span class="gq-ri ${o?'ok':'ng'}">${o?'○':'×'} ${esc(f.s.ys)} ${G_SUBJ[f.s.s]} ${f.q.no}</span>`;}).join('')}</div>
+    <div class="gq-rl">${ans.map(k=>{const f=gFind(k),o=gRight(f.q,q.pick[k]),lb=`${o?'○':'×'} ${esc(f.s.ys)} ${G_SUBJ[f.s.s]} ${f.q.no}`;return o&&!(q.xs||[]).includes(k)?`<button class="gq-ri ok" data-a="gXShow" data-v="${k}">${lb}</button>`:`<span class="gq-ri ${o?'ok':'ng'}">${lb}</span>`;}).join('')}</div>
+    ${ans.length>wr.length?`<div class="scs" style="margin:-8px 0 14px">○ の問題も、押すと解説を出せます（勘で当たった問題など）</div>`:''}
     ${wr.length?`<button class="pbtn" data-a="gRetry">🔁 間違えた${wr.length}問をもう一度</button>`:''}
+    ${(q.xs||[]).length?`<div class="sec-t">解説</div>${q.xs.map(k=>renderGX(q,k)).join('')}<div class="note">Claude（AI）が Mac で作った解説です。誤りがありえるので、気になるところは原本や白書で確かめてください。</div>`:''}
     <div class="fa"><button class="bc" data-a="gHome" style="flex:1">← 戻る</button></div></div>`;
+}
+function renderGX(q,k){
+  const f=gFind(k),x=S.gX[k],pk=q.pick[k],o=gRight(f.q,pk);
+  const body=x===undefined?'<div class="swd">読み込み中…</div>'
+    :x&&x.s==='ok'?`<div class="gx-t">${esc(x.text).replace(/【([^】]+)】/g,'<b>【$1】</b>')}</div>`
+    :x&&x.s==='run'?'<div class="swd">Claude が解説を書いています…（1問15秒ほど）</div>'
+    :x&&x.s==='err'&&!q.asked[k]?'<div class="swd">解説を作れませんでした。</div><button class="psb" data-a="gXReq" data-v="'+k+'" style="margin-top:8px">もう一度頼む</button>'
+    :o&&!q.asked[k]?'<button class="psb" data-a="gXReq" data-v="'+k+'">解説を頼む</button>'
+    :'<div class="swd">解説を待っています（Mac で1問ずつ作ります。1問15秒ほど）</div>';
+  return`<div class="tsr gx"><div class="tsh"><div class="tsn">${o?'○':'×'} ${esc(f.s.ys)} ${G_SUBJ[f.s.s]} ${f.q.no}</div><div class="tsv" style="font-size:11px">${pk?`あなた ${CIRC[pk-1]} ・ `:''}正答 ${gAnsStr(f.q)}</div></div><div style="margin-top:8px">${body}</div><div class="gq-foot" style="text-align:left;margin-top:8px"><a href="${f.s.pdf}#page=${f.q.p}" target="_blank" rel="noopener">原本PDF（日本技術士会）${f.q.p}ページ ↗</a></div></div>`;
 }
 function escA(s){return esc(s).replace(/"/g,'&quot;');}
 function renderGJList(){
@@ -1436,7 +1464,9 @@ function handleA(e){
       if(q.mode==='set'){if(n){gTick(q);q.ta=null;gRunSave(q);}else gRunClear();S.gQ=null;S.gView='home';render();if(n)toast('途中で止めました。「続きから」で再開できます');}
       else if(n)gFinish();else{S.gQ=null;S.gView='home';render();}}break;
     case 'gRetry':{const q=S.gQ;if(q)gStart('retry',q.keys.filter(k=>q.pick[k]&&!gRight(gFind(k).q,q.pick[k])),'間違えた問題をもう一度');}break;
-    case 'gHome':S.gQ=null;S.gJE=null;S.gView='home';render();document.getElementById('app').scrollTop=0;break;
+    case 'gHome':gXStop();S.gQ=null;S.gJE=null;S.gView='home';render();document.getElementById('app').scrollTop=0;break;
+    case 'gXShow':{const q=S.gQ;if(q&&!q.xs.includes(v)){q.xs.push(v);gXWatch([v]);render();}}break;
+    case 'gXReq':gXReq(v);break;
     case 'gZoom':S.gZoom=!S.gZoom;render();break;
     case 'gOrig':S.gOrig=!S.gOrig;render();break;
     case 'gRetryImg':{const k=S.gQ&&S.gQ.keys[S.gQ.i];if(k){delete S.gImg[k];gLoadImg(k);render();}}break;

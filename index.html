@@ -261,6 +261,56 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 @keyframes pop{0%{opacity:0;transform:scale(.3) rotate(-14deg)}60%{opacity:1;transform:scale(1.15) rotate(5deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
 .cf{position:absolute;width:8px;height:13px;border-radius:2px;top:-24px;animation:cfall linear forwards}
 @keyframes cfall{to{transform:translateY(112vh) rotate(760deg)}}
+/* 技術士 */
+.gq-go{width:100%;background:linear-gradient(135deg,#E8A842,#D4793A);border:none;border-radius:14px;padding:16px 18px;color:#fff;font-family:var(--font);cursor:pointer;text-align:left;box-shadow:0 6px 24px rgba(232,168,66,.25)}
+.gq-go:active{transform:scale(.98)}
+.gq-go-t{font-size:17px;font-weight:900}
+.gq-go-s{font-size:11px;opacity:.9;margin-top:3px;font-weight:500}
+.gq-today{margin-top:10px}
+.gq-grid{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:5px}
+.gq-gh{font-size:10px;color:var(--dim);text-align:center;font-weight:700;letter-spacing:1px}
+.gq-yl{font-size:11px;color:var(--mid);display:flex;align-items:center;padding-right:4px;white-space:nowrap}
+.gq-cell{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:7px 2px;font-family:var(--font);color:var(--dim);cursor:pointer;text-align:center;line-height:1.35;font-size:10px}
+.gq-cell b{display:block;font-size:13px;color:var(--text)}
+.gq-cell.p1{border-color:rgba(232,168,66,.3)}
+.gq-cell.p2{background:var(--aglow);border-color:rgba(232,168,66,.5)}
+.gq-cell:active{transform:scale(.95)}
+.gq-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.gq-tt{flex:1;min-width:0}
+.gq-t1{font-size:14px;font-weight:700}
+.gq-t1 span{font-size:11px;color:var(--dim);font-weight:500;margin-left:6px}
+.gq-t2{font-size:11px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gq-imgw{border-radius:10px;overflow-x:auto;background:#1a1a1a;border:1px solid var(--border);-webkit-overflow-scrolling:touch}
+.gq-img{display:block;width:100%;filter:invert(.9);cursor:zoom-in}
+.gq-imgw.zoom .gq-img{width:170%;max-width:none;cursor:zoom-out}
+.gq-img.orig{filter:none}
+.gq-ph{min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px}
+.gq-hint{font-size:10px;color:var(--dim);text-align:right;margin-top:5px}
+.gq-cs{display:flex;gap:8px;margin:12px 0 10px}
+.gq-c{flex:1;aspect-ratio:1;max-height:62px;border-radius:50%;background:var(--surface);border:1.5px solid var(--border);color:var(--text);font-size:22px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.gq-c:active{transform:scale(.92)}
+.gq-c.ok{background:rgba(74,222,128,.16);border-color:#4ade80;color:#4ade80}
+.gq-c.ng{background:rgba(224,82,82,.16);border-color:var(--danger);color:var(--danger)}
+.gq-c:disabled{cursor:default}
+.gq-fb{font-size:14px;font-weight:700;text-align:center;padding:10px;border-radius:10px;margin-bottom:10px}
+.gq-fb.ok{color:#4ade80;background:rgba(74,222,128,.08)}
+.gq-fb.ng{color:#F0A090;background:rgba(224,82,82,.08)}
+.gq-next{width:100%}
+.gq-foot{text-align:center;margin-top:16px;font-size:11px}
+.gq-foot a{color:var(--dim)}
+.gq-rl{display:flex;flex-wrap:wrap;gap:5px;margin:16px 0}
+.gq-ri{font-size:11px;padding:4px 8px;border-radius:6px;background:var(--surface);border:1px solid var(--border)}
+.gq-ri.ok{color:#4ade80}
+.gq-ri.ng{color:#F0A090}
+.gq-ms{display:flex;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px}
+.gq-ms:last-child{border-bottom:none}
+.gq-md{width:96px;flex-shrink:0;color:var(--mid);font-size:11px}
+.gq-mt{flex:1;min-width:0}
+.gq-mc{color:var(--accent);font-weight:700;font-size:11px;flex-shrink:0}
+.gq-ms.past{opacity:.4}
+.gj-ta{min-height:84px;resize:vertical;line-height:1.6;font-size:14px;display:block}
+.gj-item{cursor:pointer}
+.gj-item:active{background:var(--sh)}
 </style>
 </head>
 <body>
@@ -268,14 +318,14 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import{getAuth,signInWithPopup,signInWithRedirect,getRedirectResult,GoogleAuthProvider,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-import{getFirestore,doc,setDoc,onSnapshot}from"https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import{getFirestore,doc,setDoc,getDoc,onSnapshot}from"https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
 const fbApp=initializeApp({apiKey:"AIzaSyDlttoYqI42olx_khQY2MbxAgQcozD57p4",authDomain:"routine-app-5eff3.firebaseapp.com",projectId:"routine-app-5eff3",storageBucket:"routine-app-5eff3.firebasestorage.app",messagingSenderId:"282023583014",appId:"1:282023583014:web:4669d57d2ddcce7146f5e7"});
 const auth=getAuth(fbApp),db=getFirestore(fbApp);
 
 // ── Constants ──
 const DAYS=['月','火','水','木','金','土','日'],DAY_MAP={1:0,2:1,3:2,4:3,5:4,6:5,0:6};
-const R_ICONS=['✅','💪','📖','🏃','💊','🧘','🎸','💻','🥗','💧','🧹','📝','🛏','🌿','☕','🦷','📧','🎯','🧠','🚿','💤','🍳'];
+const R_ICONS=['✅','💪','📖','🏃','💊','🧘','🎸','💻','🥗','💧','🧹','📝','🛏','🌿','☕','🦷','📧','🎯','🧠','🚿','💤','🍳','📘'];
 const SCHEDULE={1:{type:'workout',label:'筋トレB（ベンチプレス）',w:'B'},2:{type:'rest',label:'完全休養'},3:{type:'workout',label:'筋トレA（スクワット）',w:'A'},4:{type:'rest',label:'完全休養'},5:{type:'rest',label:'完全休養'},6:{type:'workout',label:'筋トレC（デッドリフト）',w:'C'},0:{type:'run',label:'ランニング（ロング）'}};
 // 2026-10-23から月水土日のみ（火・木のランは休養に）。それより前の日は旧予定で表示して過去のラン記録を残す
 const SCHEDULE_FROM='2026-10-23',SCHEDULE_OLD={...SCHEDULE,2:{type:'run',label:'ランニング（ゾーン3）'},4:{type:'run',label:'ランニング（ゾーン3）'}};
@@ -294,6 +344,21 @@ const NWIN=45;               // 通知: 予定時刻からこの分数以内な�
 // 対になる秘密鍵は vapid.json（.gitignore 済み）にあり、送信側の notify.mjs が使う。
 // 空にすると前面表示中のみの通知に戻る。
 const VAPID_KEY='BDG75Fy7Nbw4yc_0bEaRzcwre870sXZG12s7wFFa_C96QsxPEK0Mc6hcX2QI6vabBa3E-Uds0kWSjPnEXGkdX8Q';
+// ── 技術士（森林部門）──
+// 令和9年度以降の日程は未発表（例年3月に公表）。例年の規則からの推定なので、公表されたら日付を直して G_EST を false に
+const G_MILES=[
+  {d:'2027-06-09',e:'2027-06-22',t:'一次 申込（WEB）'},
+  {d:'2027-11-28',t:'一次試験',exam:1},
+  {d:'2028-04-01',e:'2028-04-14',t:'二次 申込（WEB）'},
+  {d:'2028-07-17',t:'二次 筆記'},
+  {d:'2028-12-01',e:'2029-01-31',t:'二次 口頭（東京）'}];
+const G_EST=true;
+const G_SUBJ={shinrin:'森林',kiso:'基礎',tekisei:'適性'};
+const G_GOAL=10;                 // 1日の目標問題数。達するとルーティンの「技術士」（link:'gq'）に✓
+const G_BOX=[0,1,3,7,14,30,60];  // 正解を重ねるごとに次の出題までの日数をのばす
+const G_TAGS=['専門的学識','問題解決','マネジメント','評価','コミュニケーション','リーダーシップ','技術者倫理','継続研さん'];
+const GJ_F=[['title','タイトル','例: 低肥料試験区の設計と評価',0],['when','時期','例: 2024年3月〜2025年2月',0],['role','立場と役割','例: 試験の設計と取りまとめ。現地スタッフ3人に指示',1],['issue','課題（何が問題だったか）','',1],['choice','比べた選択肢と、それを選んだ理由','',1],['result','結果（数字）と、残ったもの','',1]];
+const CIRC='①②③④⑤';
 
 // ── State ──
 let S={user:null,authOk:false,dataOk:false,
@@ -303,6 +368,8 @@ let S={user:null,authOk:false,dataOk:false,
   fit:{workouts:{},runs:{},weight:{},meals:{}},fDate:fmtD(new Date()),fTab:'log',reports:[],reportIdx:0,
   // settings / notifications
   settings:defSettings(),
+  // 技術士: 過去問の索引・解いた記録・業務記録、ドリル中の状態、問題画像のキャッシュ
+  gIdx:null,gP:{q:{},days:{},tests:[]},gJ:[],gView:'home',gQ:null,gImg:{},gJE:null,gZoom:false,gOrig:false,
   // global
   tab:'routine',toast:null,cele:null,unsub:[]};
 let toastT,celeT;
@@ -326,13 +393,18 @@ function startSync(uid){
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','fitness'),s=>{if(s.exists()){const d=s.data();S.fit={workouts:d.workouts||{},runs:d.runs||{},weight:d.weight||{},meals:d.meals||{}};}render();}));
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','reports'),s=>{if(s.exists()){S.reports=s.data().items||[];}render();}));
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','settings'),s=>{const d=s.exists()?s.data():{},def=defSettings();S.settings={notif:Object.assign(def.notif,d.notif||{}),pushSubs:d.pushSubs||{}};render();}));
+  S.unsub.push(onSnapshot(doc(db,'users',uid,'data','gq_idx'),s=>{S.gIdx=s.exists()?s.data():null;render();}));
+  S.unsub.push(onSnapshot(doc(db,'users',uid,'data','gprog'),s=>{const d=s.exists()?s.data():{};S.gP={q:d.q||{},days:d.days||{},tests:d.tests||[]};render();}));
+  S.unsub.push(onSnapshot(doc(db,'users',uid,'data','gjournal'),s=>{S.gJ=s.exists()?s.data().items||[]:[];render();}));
 }
 async function saveR(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','tasks'),{items:S.tasks});}catch(e){}}
 async function saveC(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','completions'),{entries:S.comps});}catch(e){}}
 async function saveF(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','fitness'),S.fit);}catch(e){}}
 async function saveS(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','settings'),S.settings);}catch(e){console.error(e);}}
+async function saveG(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','gprog'),S.gP);}catch(e){console.error(e);}}
+async function saveJ(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','gjournal'),{items:S.gJ});}catch(e){console.error(e);}}
 
-onAuthStateChanged(auth,u=>{S.user=u;S.authOk=true;if(u)startSync(u.uid);else{S.dataOk=false;S.tasks=[];S.comps={};S.fit={workouts:{},runs:{},weight:{},meals:{}};S.settings=defSettings();render();}});
+onAuthStateChanged(auth,u=>{S.user=u;S.authOk=true;if(u)startSync(u.uid);else{S.dataOk=false;S.tasks=[];S.comps={};S.fit={workouts:{},runs:{},weight:{},meals:{}};S.settings=defSettings();S.gIdx=null;S.gP={q:{},days:{},tests:[]};S.gJ=[];S.gQ=null;S.gImg={};S.gView='home';render();}});
 getRedirectResult(auth).catch(()=>{});
 async function login(){const p=new GoogleAuthProvider();try{await signInWithPopup(auth,p);}catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/popup-closed-by-user')await signInWithRedirect(auth,p);}}
 async function logout(){S.unsub.forEach(u=>u());S.unsub=[];await signOut(auth);}
@@ -579,6 +651,99 @@ async function registerPush(){
 // ── Fitness helpers ──
 function getPrev(exId,beforeDate){const dates=Object.keys(S.fit.workouts).filter(d=>d<beforeDate).sort().reverse();for(const d of dates){const w=S.fit.workouts[d];if(w&&w[exId])return w[exId];}return null;}
 
+// ── 技術士: 過去問ドリル ──
+// 索引と正答は data/gq_idx、問題の画像は gq/{k}、解いた記録は data/gprog（どれもログインした本人だけが読める）
+// 正答 a は番号。複数正解は配列、不成立の問題は 0（出題しない）
+let gMap=null,gMapSrc=null;
+function gSets(){return(S.gIdx&&S.gIdx.sets)||[];}
+function gFind(k){if(gMapSrc!==S.gIdx){gMap={};gSets().forEach(s=>s.qs.forEach(q=>{gMap[q.k]={s,q};}));gMapSrc=S.gIdx;}return gMap[k];}
+function gOk(q){return Array.isArray(q.a)?q.a.length>0:q.a>0;}
+function gRight(q,c){return Array.isArray(q.a)?q.a.includes(c):q.a===c;}
+function gAnsStr(q){return(Array.isArray(q.a)?q.a:[q.a]).map(n=>CIRC[n-1]).join('・');}
+function gKeysOf(s){return s.qs.filter(gOk).map(q=>q.k);}
+function gAll(){return gSets().flatMap(gKeysOf);}
+function gDays(ds){return Math.round((parseD(ds)-parseD(fmtD(new Date())))/864e5);}
+function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function gDue(){const td=fmtD(new Date()),Q=S.gP.q;return gAll().filter(k=>Q[k]&&Q[k].due<=td).sort((a,b)=>Q[a].due<Q[b].due?-1:Q[a].due>Q[b].due?1:0);}
+function gWeak(){const Q=S.gP.q;return gAll().filter(k=>Q[k]&&Q[k].r.slice(-1)==='x');}
+// 今日の10問: 復習の期日が来た問題を先に、残りは新しい問題を 森林5:基礎3:適性2 で混ぜる
+function gDailyKeys(){
+  const due=gDue().slice(0,G_GOAL),need=G_GOAL-due.length;
+  if(need<=0)return due;
+  const fr={shinrin:[],kiso:[],tekisei:[]};
+  shuffle(gAll().filter(k=>!S.gP.q[k])).forEach(k=>{const f=gFind(k);if(f&&fr[f.s.s])fr[f.s.s].push(k);});
+  const order=['shinrin','kiso','shinrin','tekisei','shinrin','kiso','shinrin','tekisei','shinrin','kiso'],pick=[];
+  for(let i=0;pick.length<need&&i<need*order.length;i++){const l=fr[order[i%order.length]];if(l.length)pick.push(l.shift());}
+  return[...due,...pick];
+}
+function gRecord(k,ok){
+  const td=fmtD(new Date()),p=S.gP.q[k]||{n:0,c:0,b:0,r:''};
+  p.n++;if(ok)p.c++;
+  // 初めてで正解なら3日後、そのあとは正解のたびに間隔をのばす。間違えたら翌日に戻す
+  p.b=ok?Math.min(p.b?p.b+1:2,G_BOX.length-1):1;
+  const d=new Date();d.setDate(d.getDate()+(ok?G_BOX[p.b]:1));
+  p.due=fmtD(d);p.l=td;p.r=(p.r+(ok?'o':'x')).slice(-10);
+  S.gP.q[k]=p;
+  const day=S.gP.days[td]||{n:0,c:0};day.n++;if(ok)day.c++;S.gP.days[td]=day;
+}
+function gStats(){
+  const all=gAll(),Q=S.gP.q,td=fmtD(new Date());
+  let n7=0,c7=0;const d=new Date();
+  for(let i=0;i<7;i++){const x=S.gP.days[fmtD(d)];if(x){n7+=x.n;c7+=x.c;}d.setDate(d.getDate()-1);}
+  // 解いた日の連続（今日まだなら昨日から数える）
+  let st=0;const e=new Date();if(!(S.gP.days[td]||{}).n)e.setDate(e.getDate()-1);
+  for(let i=0;i<HIST_CAP;i++){if((S.gP.days[fmtD(e)]||{}).n){st++;e.setDate(e.getDate()-1);}else break;}
+  return{all:all.length,seen:all.filter(k=>Q[k]).length,due:gDue().length,n7,c7,st,today:S.gP.days[td]||{n:0,c:0}};
+}
+// 最後に解いたときに正解だった割合
+function gAcc(keys){const Q=S.gP.q,seen=keys.filter(k=>Q[k]),ok=seen.filter(k=>Q[k].r.slice(-1)==='o').length;return{n:keys.length,seen:seen.length,ok,pct:seen.length?Math.round(ok/seen.length*100):0};}
+async function gLoadImg(k){
+  if(!k||S.gImg[k]||!S.user)return;
+  S.gImg[k]='loading';
+  try{const s=await getDoc(doc(db,'users',S.user.uid,'gq',k));S.gImg[k]=s.exists()?s.data():{err:1};}catch(e){S.gImg[k]={err:1};}
+  const ks=Object.keys(S.gImg);if(ks.length>40)ks.slice(0,ks.length-40).forEach(x=>{if(!S.gQ||!S.gQ.keys.slice(S.gQ.i,S.gQ.i+2).includes(x))delete S.gImg[x];});
+  if(S.gQ&&S.gQ.keys[S.gQ.i]===k)render();
+}
+function gPrefetch(){const q=S.gQ;if(q){gLoadImg(q.keys[q.i]);gLoadImg(q.keys[q.i+1]);}}
+function gStart(mode,keys,title,set){
+  if(!keys.length){toast('出せる問題がありません');return;}
+  S.gQ={mode,title,set:set||null,keys,i:0,pick:{}};S.gView='quiz';S.gZoom=false;
+  render();gPrefetch();document.getElementById('app').scrollTop=0;
+}
+function gAnswer(c){
+  const q=S.gQ;if(!q)return;const k=q.keys[q.i],f=gFind(k);if(!f||q.pick[k])return;
+  q.pick[k]=c;const ok=gRight(f.q,c);
+  gRecord(k,ok);saveG();
+  if(navigator.vibrate)try{navigator.vibrate(ok?12:[30,40,30]);}catch(e){}
+  gAutoTask();render();
+}
+function gNext(){
+  const q=S.gQ;if(!q)return;
+  if(q.i<q.keys.length-1){q.i++;S.gZoom=false;render();gPrefetch();document.getElementById('app').scrollTop=0;}
+  else gFinish();
+}
+function gFinish(){
+  const q=S.gQ,ans=q.keys.filter(k=>q.pick[k]),c=ans.filter(k=>gRight(gFind(k).q,q.pick[k])).length;
+  if(q.mode==='set'&&ans.length){S.gP.tests=[...S.gP.tests,{set:q.set,d:fmtD(new Date()),c,n:ans.length}].slice(-60);saveG();}
+  q.result={c,n:ans.length};S.gView='done';render();document.getElementById('app').scrollTop=0;
+}
+// 今日 G_GOAL 問に達したら、ルーティンの「技術士」（link:'gq'）に✓を付ける
+function gAutoTask(){
+  const td=fmtD(new Date());if(((S.gP.days[td]||{}).n||0)<G_GOAL)return;
+  const t=S.tasks.find(x=>x.link==='gq');if(!t||!t.days.includes(tdi()))return;
+  const k=`${td}:${t.id}`;if(S.comps[k])return;
+  S.comps[k]=Date.now();saveC();
+  const sk=getStreak(t);
+  celebrate('📘',`今日の${G_GOAL}問 達成！`,sk>1?`${t.icon} ${t.name} ${sk}日連続`:`ルーティン「${t.name}」に✓を付けました`);
+}
+// 業務記録を保存したら、週1回のルーティン（link:'gj'）に今週分の✓を付ける
+function gjAutoTask(){
+  const t=S.tasks.find(x=>x.link==='gj'&&isWk(x)),td=fmtD(new Date());
+  if(!t||wkDoneDay(t,td))return;
+  S.comps[`${td}:${t.id}`]=Date.now();saveC();
+}
+function gjLen(s){return[...(s||'')].filter(c=>c!=='\n').length;}
+
 // ── Render ──
 function render(){
   const a=document.getElementById('app');
@@ -588,6 +753,8 @@ function render(){
   let html='';
   if(S.tab==='routine'){
     html=S.rView==='week'?renderWeek():S.rView==='stats'?renderStats():S.rView==='settings'?renderSettings():(S.rView==='add'||S.rView==='edit')?renderRForm():renderRHome();
+  }else if(S.tab==='study'){
+    html=renderStudy();
   }else{
     html=renderFitness();
   }
@@ -600,7 +767,7 @@ function render(){
 
 function renderLogin(){return `<div class="login-wrap"><div class="login-icon">🌱</div><div class="login-title">Daily</div><div class="login-desc">ルーティン＆フィットネス管理<br>デバイス間で自動同期</div><button class="login-btn" data-a="login"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">Googleでログイン</button></div>`;}
 
-function renderBTabs(){return `<div class="btabs"><button class="btab ${S.tab==='routine'?'active':''}" data-a="switchTab" data-v="routine"><span class="btab-icon">✅</span>ルーティン</button><button class="btab ${S.tab==='fitness'?'active':''}" data-a="switchTab" data-v="fitness"><span class="btab-icon">💪</span>トレーニング</button></div>`;}
+function renderBTabs(){return `<div class="btabs">${[['routine','✅','ルーティン'],['fitness','💪','トレーニング'],['study','📘','技術士']].map(([t,ic,l])=>`<button class="btab ${S.tab===t?'active':''}" data-a="switchTab" data-v="${t}"><span class="btab-icon">${ic}</span>${l}</button>`).join('')}</div>`;}
 
 // ── Routine views ──
 function renderRHome(){
@@ -758,6 +925,103 @@ function renderWeek(){
   if(wk.length)html+=`<div class="wk-day"><div class="wk-label"><span>週1回</span><span style="font-size:10px;color:var(--dim)">好きな日に</span></div><div class="wk-tasks">${wk.map(t=>{const dd=wkDoneDay(t,tds);return`<div class="wk-task">${t.icon} ${esc(t.name)}${dd?` <span style="color:var(--accent)">✓ ${DN[parseD(dd).getDay()]}</span>`:''}</div>`;}).join('')}</div></div>`;
   html+=`<div class="fa"><button class="bc" data-a="weekBack" style="flex:1">← 戻る</button></div></div>`;
   return html;
+}
+
+// ── 技術士ビュー ──
+function renderStudy(){
+  if(S.gView==='quiz'&&S.gQ)return renderGQuiz();
+  if(S.gView==='done'&&S.gQ&&S.gQ.result)return renderGDone();
+  if(S.gView==='jform'&&S.gJE)return renderGJForm();
+  if(S.gView==='jlist')return renderGJList();
+  return renderGHome();
+}
+function gMd(ds,from){const d=parseD(ds);return(from&&parseD(from).getFullYear()===d.getFullYear()?'':`${d.getFullYear()}/`)+`${d.getMonth()+1}/${d.getDate()}`;}
+function renderGHome(){
+  const td=fmtD(new Date()),ex=G_MILES.find(m=>m.exam);
+  let h=`<div class="app-inner fv">
+    <div class="header"><div><div class="date-label">技術士 第一次試験まで${G_EST?'（予定）':''}</div><div class="greeting">あと ${gDays(ex.d)} 日</div></div><div style="display:flex;gap:6px"><button class="hbtn" data-a="gJList" title="業務記録">📝</button></div></div>`;
+  if(!gSets().length)h+=`<div class="note">過去問のデータがまだ入っていません。</div>`;
+  else{
+    const st=gStats(),dk=gDailyKeys(),dueN=dk.filter(k=>S.gP.q[k]).length,newN=dk.length-dueN,weak=gWeak().length;
+    h+=`<button class="gq-go" data-a="gDaily"><div class="gq-go-t">▶ 今日の${G_GOAL}問</div><div class="gq-go-s">${[dueN?`復習 ${dueN}問`:'',newN?`新しい問題 ${newN}問`:''].filter(Boolean).join('・')||'出せる問題がありません'}</div></button>
+    <div class="gq-today"><div class="tsb"><div class="tsf" style="width:${Math.min(100,Math.round(st.today.n/G_GOAL*100))}%"></div></div><div class="tsm"><span>今日 ${st.today.n}問${st.today.n>=G_GOAL?' ✓':''}</span>${st.today.n?`<span>正答 ${Math.round(st.today.c/st.today.n*100)}%</span>`:''}<span>🔥 ${st.st}日連続</span>${st.due>dueN?`<span>復習待ち ${st.due}問</span>`:''}</div></div>
+    <div class="sg" style="margin-top:14px">
+      <div class="sc"><div class="scv">${st.seen}<small>/${st.all}</small></div><div class="scl">解いた問題</div></div>
+      <div class="sc"><div class="scv">${st.n7?Math.round(st.c7/st.n7*100):0}<small>%</small></div><div class="scl">正答率（直近7日）</div><div class="scs">${st.n7}問</div></div>
+    </div>
+    <div class="sec-t">科目別（最後に解いたときの正答率）</div>
+    ${Object.keys(G_SUBJ).map(s=>{const x=gAcc(gSets().filter(z=>z.s===s).flatMap(gKeysOf));return`<div class="tsr"><div class="tsh"><div class="tsn">${G_SUBJ[s]}${s==='shinrin'?' <span style="font-size:10px;color:var(--dim);font-weight:500">専門</span>':''}</div><div class="tsv">${x.seen?x.pct+'%':'—'}</div></div><div class="tsb"><div class="tsf" style="width:${x.seen?x.pct:0}%"></div></div><div class="tsm"><span>${x.seen}/${x.n}問 解いた</span><span>合格ライン 50%</span></div></div>`;}).join('')}
+    ${weak?`<button class="pbtn" data-a="gWeak" style="margin-top:6px">🔁 間違えたままの問題（${weak}問）</button>`:''}
+    <div class="sec-t">年度別に通しで解く</div>
+    ${renderGGrid()}`;
+  }
+  h+=`<div class="sec-t">業務記録（二次試験の材料）</div>${renderGJSummary()}
+    <div class="sec-t">日程${G_EST?'（令和9年度以降は例年からの推定）':''}</div>
+    <div class="hmwrap">${G_MILES.map(m=>{const past=(m.e||m.d)<td,dd=gDays(m.d);return`<div class="gq-ms${past?' past':''}"><div class="gq-md">${gMd(m.d)}${m.e?'〜'+gMd(m.e,m.d):''}</div><div class="gq-mt">${esc(m.t)}${G_EST?' <span style="font-size:10px;color:var(--dim)">予定</span>':''}</div><div class="gq-mc">${past?'済':dd>0?`あと${dd}日`:'期間中'}</div></div>`;}).join('')}</div>
+    <div class="note">試験はすべて日本国内（一次は17都道府県、二次の筆記は12都道府県、口頭は東京）。</div>
+  </div>`;
+  return h;
+}
+// 年度 × 科目。セルは最後に解いたときの正答率と、解いた数
+function renderGGrid(){
+  const ys=[],subs=Object.keys(G_SUBJ);
+  gSets().forEach(s=>{if(!ys.find(y=>y.y===s.y))ys.push(s);});
+  return`<div class="gq-grid"><div></div>${subs.map(s=>`<div class="gq-gh">${G_SUBJ[s]}</div>`).join('')}${ys.map(y=>`<div class="gq-yl">${esc(y.ys)}</div>${subs.map(s=>{
+    const set=gSets().find(z=>z.y===y.y&&z.s===s);if(!set)return'<div></div>';
+    const x=gAcc(gKeysOf(set));
+    return`<button class="gq-cell${x.seen?(x.seen===x.n?' p2':' p1'):''}" data-a="gSet" data-v="${set.id}">${x.seen?`<b>${x.pct}%</b>${x.seen}/${x.n}問`:`<b>—</b>${x.n}問`}</button>`;
+  }).join('')}`).join('')}</div>`;
+}
+function renderGJSummary(){
+  const ws=wkStart(fmtD(new Date())).getTime(),wk=S.gJ.some(j=>(j.updated||0)>=ws);
+  return`<div class="tsr gj-item" data-a="gJList"><div class="tsh"><div class="tsn">📝 業務記録 ${S.gJ.length}件</div><div class="tsv" style="font-size:12px">${wk?'今週 ✓':'今週まだ'}</div></div><div class="tsm"><span>課題 → 比べた選択肢と判断 → 結果（数字）</span></div></div>
+    <button class="pbtn" data-a="gJNew">＋ 業務記録を書く</button>`;
+}
+function renderGQuiz(){
+  const q=S.gQ,k=q.keys[q.i],f=gFind(k),im=S.gImg[k],pk=q.pick[k],P=S.gP.q[k];
+  if(!f)return`<div class="app-inner"><div class="note">問題が見つかりません</div><div class="fa"><button class="bc" data-a="gHome" style="flex:1">← 戻る</button></div></div>`;
+  const lab=`${f.s.yl} ${G_SUBJ[f.s.s]} ${f.q.no}`,ok=pk&&gRight(f.q,pk);
+  const hist=P&&P.r?(pk?P.r.slice(0,-1):P.r):'';
+  const img=!im||im==='loading'?`<div class="gq-ph"><div class="sp"></div></div>`
+    :im.err?`<div class="gq-ph"><div class="swd">問題の画像を読み込めませんでした</div><button class="psb" data-a="gRetryImg">もう一度読み込む</button></div>`
+    :`<div class="gq-imgw${S.gZoom?' zoom':''}"><img class="gq-img${S.gOrig?' orig':''}" src="${im.img}" alt="${esc(lab)}" data-a="gZoom"></div><div class="gq-hint">画像をタップで拡大／縮小</div>`;
+  return`<div class="app-inner fv">
+    <div class="gq-top"><button class="hbtn" data-a="gQuit" title="やめる">✕</button><div class="gq-tt"><div class="gq-t1">${esc(q.title)}<span>${q.i+1} / ${q.keys.length}</span></div><div class="gq-t2">${esc(lab)}${hist?` ・ これまで ${hist.replace(/o/g,'○').replace(/x/g,'×')}`:''}</div></div><button class="hbtn" data-a="gOrig" title="白黒を反転">◐</button></div>
+    <div class="tsb" style="margin:0 0 12px"><div class="tsf" style="width:${Math.round((q.i+(pk?1:0))/q.keys.length*100)}%"></div></div>
+    ${img}
+    <div class="gq-cs">${[1,2,3,4,5].map(n=>`<button class="gq-c${pk?(gRight(f.q,n)?' ok':n===pk?' ng':''):''}" data-a="gAns" data-v="${n}" ${pk?'disabled':''}>${CIRC[n-1]}</button>`).join('')}</div>
+    ${pk?`<div class="gq-fb ${ok?'ok':'ng'}">${ok?'⭕ 正解':'❌ 不正解'}　正解は ${gAnsStr(f.q)}${Array.isArray(f.q.a)?'（どれも正解扱い）':''}</div><button class="bs gq-next" data-a="gNext">${q.i<q.keys.length-1?'次へ ▶':'結果を見る'}</button>`:''}
+    <div class="gq-foot"><a href="${f.s.pdf}#page=${f.q.p}" target="_blank" rel="noopener">原本PDF（日本技術士会）${f.q.p}ページ ↗</a></div>
+  </div>`;
+}
+function renderGDone(){
+  const q=S.gQ,r=q.result,ans=q.keys.filter(k=>q.pick[k]),pct=r.n?Math.round(r.c/r.n*100):0,c=2*Math.PI*46;
+  const wr=ans.filter(k=>!gRight(gFind(k).q,q.pick[k]));
+  return`<div class="app-inner fv"><div class="stl">${esc(q.title)} の結果</div>
+    <div class="pw"><div class="rc"><svg viewBox="0 0 104 104"><circle cx="52" cy="52" r="46" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/><circle cx="52" cy="52" r="46" fill="none" stroke="${pct>=50?'#4ade80':'#E8A842'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${pct/100*c} ${c}" transform="rotate(-90 52 52)"/></svg><div class="rt"><div class="rp">${pct}%</div><div class="rs">${r.c}/${r.n}</div></div></div></div>
+    <div class="scs" style="text-align:center;margin:-10px 0 6px">${r.n<q.keys.length?`${q.keys.length}問中 ${r.n}問に解答 ・ `:''}合格ラインは各科目50%</div>
+    <div class="gq-rl">${ans.map(k=>{const f=gFind(k),o=gRight(f.q,q.pick[k]);return`<span class="gq-ri ${o?'ok':'ng'}">${o?'○':'×'} ${esc(f.s.ys)} ${G_SUBJ[f.s.s]} ${f.q.no}</span>`;}).join('')}</div>
+    ${wr.length?`<button class="pbtn" data-a="gRetry">🔁 間違えた${wr.length}問をもう一度</button>`:''}
+    <div class="fa"><button class="bc" data-a="gHome" style="flex:1">← 戻る</button></div></div>`;
+}
+function escA(s){return esc(s).replace(/"/g,'&quot;');}
+function renderGJList(){
+  return`<div class="app-inner fv"><div class="stl">📝 業務記録</div>
+    <div class="note" style="margin:-8px 0 14px">二次試験の「業務内容の詳細」（720字）と口頭試験の材料。業務ごとに「課題 → 比べた選択肢と判断 → 結果（数字）」を残しておく。</div>
+    <button class="pbtn" data-a="gJNew">＋ 新しく書く</button>
+    ${S.gJ.map(j=>`<div class="tsr gj-item" data-a="gJEdit" data-id="${j.id}"><div class="tsh"><div class="tsn">${esc(j.title)}</div>${gjLen(j.sum)?`<div class="tsv" style="font-size:11px">${gjLen(j.sum)}字</div>`:''}</div><div class="tsm">${j.when?`<span>${esc(j.when)}</span>`:''}${(j.tags||[]).map(t=>`<span>#${esc(t)}</span>`).join('')}</div>${j.issue?`<div class="td" style="margin-top:6px;line-height:1.5">${esc(j.issue.length>80?j.issue.slice(0,80)+'…':j.issue)}</div>`:''}</div>`).join('')}
+    ${S.gJ.length?'':`<div class="note">題材の例: 低肥料試験区、植林機械の成績評価、森林の時価評価</div>`}
+    <div class="fa"><button class="bc" data-a="gHome" style="flex:1">← 戻る</button></div></div>`;
+}
+function renderGJForm(){
+  const e=S.gJE,n=gjLen(e.sum);
+  return`<div class="app-inner fv"><div class="stl">${e.id?'業務記録を編集':'業務記録を書く'}</div>
+    ${GJ_F.map(([f,l,ph,ml])=>`<div class="ig"><label class="il">${l}</label>${ml?`<textarea class="ti gj-ta" data-a="gjf" data-f="${f}" placeholder="${escA(ph)}">${esc(e[f]||'')}</textarea>`:`<input class="ti" data-a="gjf" data-f="${f}" value="${escA(e[f]||'')}" placeholder="${escA(ph)}">`}</div>`).join('')}
+    <div class="ig"><label class="il">関係するコンピテンシー</label><div class="icg">${G_TAGS.map(t=>`<button class="psb ${e.tags.includes(t)?'ac':''}" data-a="gjTag" data-v="${t}">${t}</button>`).join('')}</div></div>
+    <div class="ig"><label class="il">720字のまとめ（あとでよい）</label><textarea class="ti gj-ta" style="min-height:170px" data-a="gjf" data-f="sum" placeholder="目的 → 立場と役割 → 技術的内容及び課題 → 技術的成果">${esc(e.sum||'')}</textarea><div class="swd" id="gjCnt" style="text-align:right;margin-top:6px;${n>720?'color:var(--danger)':''}">${n} / 720字</div></div>
+    <div class="fa"><button class="bc" data-a="gjCancel">キャンセル</button><button class="bs" data-a="gjSave">保存する</button></div>
+    ${e.id?`<button class="pbtn" data-a="gjDel" style="margin-top:14px;color:var(--danger);background:rgba(224,82,82,.1);border-color:rgba(224,82,82,.25)">この記録を削除</button>`:''}
+  </div>`;
 }
 
 // ── Fitness views ──
@@ -1015,6 +1279,11 @@ function bind(){
   document.querySelectorAll('[data-a="fTime"]').forEach(el=>el.addEventListener('input',handleA));
   const ni=document.getElementById('ni');
   if(ni)ni.addEventListener('input',e=>{S.form.name=e.target.value;const b=document.querySelector('[data-a="save"]');if(b)b.disabled=!(S.form.name.trim()&&(S.form.wk||S.form.days.length));});
+  // 業務記録: 入力のたびに控えておく（タグを押して描き直しても消えないように）。まとめ欄は字数を出す
+  document.querySelectorAll('[data-a="gjf"]').forEach(el=>el.addEventListener('input',()=>{
+    if(!S.gJE)return;const f=el.dataset.f;S.gJE[f]=el.value;
+    if(f==='sum'){const c=document.getElementById('gjCnt'),n=gjLen(el.value);if(c){c.textContent=`${n} / 720字`;c.style.color=n>720?'var(--danger)':'';}}
+  }));
 }
 
 function handleA(e){
@@ -1022,7 +1291,7 @@ function handleA(e){
   switch(a){
     case 'login':login();break;
     case 'logout':logout();break;
-    case 'switchTab':S.tab=v;S.rView='home';S.rDate=fmtD(new Date());S.pop=null;render();break;
+    case 'switchTab':if(v==='study'&&S.tab==='study'&&S.gView!=='quiz')S.gView='home';S.tab=v;S.rView='home';S.rDate=fmtD(new Date());S.pop=null;render();document.getElementById('app').scrollTop=0;break;
     // Routine
     case 'toggle':toggleComp(id);break;
     case 'toggleW':toggleWk(id);break;
@@ -1071,6 +1340,33 @@ function handleA(e){
     case 'fToday':S.fDate=fmtD(new Date());render();break;
     case 'repPrev':if(S.reportIdx<S.reports.length-1){S.reportIdx++;render();}break;
     case 'repNext':if(S.reportIdx>0){S.reportIdx--;render();}break;
+    // 技術士
+    case 'gDaily':gStart('daily',gDailyKeys(),`今日の${G_GOAL}問`);break;
+    case 'gWeak':gStart('weak',shuffle(gWeak()).slice(0,20),'間違えたままの問題');break;
+    case 'gSet':{const s=gSets().find(x=>x.id===v);if(s)gStart('set',gKeysOf(s),`${s.yl} ${G_SUBJ[s.s]}`,s.id);}break;
+    case 'gAns':gAnswer(parseInt(v,10));break;
+    case 'gNext':gNext();break;
+    case 'gQuit':if(S.gQ&&Object.keys(S.gQ.pick).length)gFinish();else{S.gQ=null;S.gView='home';render();}break;
+    case 'gRetry':{const q=S.gQ;if(q)gStart('retry',q.keys.filter(k=>q.pick[k]&&!gRight(gFind(k).q,q.pick[k])),'間違えた問題をもう一度');}break;
+    case 'gHome':S.gQ=null;S.gJE=null;S.gView='home';render();document.getElementById('app').scrollTop=0;break;
+    case 'gZoom':S.gZoom=!S.gZoom;render();break;
+    case 'gOrig':S.gOrig=!S.gOrig;render();break;
+    case 'gRetryImg':{const k=S.gQ&&S.gQ.keys[S.gQ.i];if(k){delete S.gImg[k];gLoadImg(k);render();}}break;
+    case 'gJList':S.gView='jlist';render();document.getElementById('app').scrollTop=0;break;
+    case 'gJNew':S.gJE={title:'',when:'',role:'',issue:'',choice:'',result:'',tags:[],sum:''};S.gView='jform';render();document.getElementById('app').scrollTop=0;break;
+    case 'gJEdit':{const j=S.gJ.find(x=>x.id===id);if(j){S.gJE=JSON.parse(JSON.stringify(j));if(!S.gJE.tags)S.gJE.tags=[];S.gView='jform';render();document.getElementById('app').scrollTop=0;}}break;
+    case 'gjf':if(S.gJE)S.gJE[el.dataset.f]=el.value;break;
+    case 'gjTag':{const t=S.gJE.tags,i=t.indexOf(v);if(i>=0)t.splice(i,1);else t.push(v);render();}break;
+    case 'gjCancel':S.gJE=null;S.gView=S.gJ.length?'jlist':'home';render();break;
+    case 'gjSave':{
+      const e=S.gJE;if(!e)break;
+      if(!(e.title||'').trim()){toast('タイトルを入れてください');break;}
+      const rec={id:e.id||'j_'+Date.now(),title:e.title.trim(),when:e.when||'',role:e.role||'',issue:e.issue||'',choice:e.choice||'',result:e.result||'',tags:e.tags||[],sum:e.sum||'',created:e.created||Date.now(),updated:Date.now()};
+      const i=S.gJ.findIndex(x=>x.id===rec.id);
+      if(i>=0)S.gJ[i]=rec;else S.gJ=[rec,...S.gJ];
+      saveJ();gjAutoTask();S.gJE=null;S.gView='jlist';toast('保存しました');
+    }break;
+    case 'gjDel':if(S.gJE&&S.gJE.id&&confirm('この業務記録を削除しますか？')){S.gJ=S.gJ.filter(x=>x.id!==S.gJE.id);saveJ();S.gJE=null;S.gView='jlist';toast('削除しました');}break;
   }
 }
 

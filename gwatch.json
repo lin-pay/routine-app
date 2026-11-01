@@ -1,0 +1,28 @@
+{
+ "_説明": "gwatch.py が見張る公式ページ。kind: links（リンクの増減）・rss・text（本文の start〜end）・file（PDF の差し替え）。include/exclude は URL の正規表現、keywords はリンクの文字に含まれるべき語（\"@exam\" は keywords_exam）。止めるときは \"off\": true",
+ "keywords_exam": ["試験", "技術士第", "第一次", "第二次", "合格", "正答", "コンピテンシー", "資質能力", "実施大綱", "受験", "口頭", "筆記", "技術部門", "選択科目", "森林"],
+ "targets": [
+  {"id": "jsea_top", "site": "日本技術士会", "name": "トップページのお知らせ（試験関係）", "kind": "links", "url": "https://www.engineer.or.jp/", "include": "engineer\\.or\\.jp/c_topics/", "keywords": "@exam", "start": "id=\"main_content\"", "end": "id=\"scroll_to_top\""},
+  {"id": "jsea_oshirase", "site": "日本技術士会", "name": "お知らせ（試験関係）", "kind": "links", "url": "https://www.engineer.or.jp/sub10/", "include": "engineer\\.or\\.jp/c_topics/", "keywords": "@exam", "start": "id=\"MainArea2\"", "end": "id=\"SubArea\""},
+  {"id": "jsea_rss", "site": "日本技術士会", "name": "新着情報 RSS（試験関係）", "kind": "rss", "url": "https://www.engineer.or.jp/c_rss/topics.rdf", "keywords": "@exam"},
+  {"id": "jsea_shiken", "site": "日本技術士会", "name": "試験・登録情報", "kind": "links", "url": "https://www.engineer.or.jp/sub02/", "include": "engineer\\.or\\.jp/c_topics/", "start": "id=\"MainArea2\"", "end": "id=\"SubArea\""},
+  {"id": "jsea_ichiji", "site": "日本技術士会", "name": "第一次試験", "kind": "links", "url": "https://www.engineer.or.jp/c_categories/index02009.html", "include": "engineer\\.or\\.jp/c_topics/", "start": "id=\"MainArea1\"", "end": "id=\"FootArea\""},
+  {"id": "jsea_niji", "site": "日本技術士会", "name": "第二次試験", "kind": "links", "url": "https://www.engineer.or.jp/c_categories/index02010.html", "include": "engineer\\.or\\.jp/c_topics/", "start": "id=\"MainArea1\"", "end": "id=\"FootArea\""},
+  {"id": "jsea_goukaku", "site": "日本技術士会", "name": "合格発表（第一次試験）", "kind": "links", "url": "https://www.engineer.or.jp/c_categories/index02011102.html", "include": "engineer\\.or\\.jp/c_topics/", "start": "id=\"MainArea1\"", "end": "id=\"FootArea\""},
+  {"id": "jsea_seitou", "site": "日本技術士会", "name": "択一式問題の正答", "kind": "links", "url": "https://www.engineer.or.jp/c_categories/index02012.html", "include": "engineer\\.or\\.jp/c_topics/", "start": "id=\"MainArea1\"", "end": "id=\"FootArea\""},
+  {"id": "jsea_seitou_pdf", "site": "日本技術士会", "name": "第一次試験の正答（年度ごとの PDF）", "kind": "links", "url": "https://www.engineer.or.jp/c_topics/004/004106.html", "include": "/attached/", "start": "id=\"MainArea1\"", "end": "id=\"FootArea\""},
+  {"id": "jsea_toukei", "site": "日本技術士会", "name": "統計情報", "kind": "links", "url": "https://www.engineer.or.jp/c_categories/index02013.html", "include": "engineer\\.or\\.jp/c_topics/", "start": "id=\"MainArea1\"", "end": "id=\"FootArea\""},
+  {"id": "jsea_henkou", "site": "日本技術士会", "name": "技術士試験における変更点", "kind": "links", "url": "https://www.engineer.or.jp/c_categories/index02014.html", "include": "engineer\\.or\\.jp/c_topics/", "start": "id=\"MainArea1\"", "end": "id=\"FootArea\""},
+  {"id": "jsea_happyou", "site": "日本技術士会", "name": "発表資料", "kind": "links", "url": "https://www.engineer.or.jp/c_categories/index02015.html", "include": "engineer\\.or\\.jp/c_topics/", "start": "id=\"MainArea1\"", "end": "id=\"FootArea\""},
+  {"id": "jsea_shiryou", "site": "日本技術士会", "name": "試験関係資料", "kind": "links", "url": "https://www.engineer.or.jp/c_categories/index02019.html", "include": "engineer\\.or\\.jp/c_topics/", "start": "id=\"MainArea1\"", "end": "id=\"FootArea\""},
+  {"id": "jsea_kakomon1", "site": "日本技術士会", "name": "過去問題（第一次試験）", "kind": "links", "url": "https://www.engineer.or.jp/c_categories/index02021.html", "include": "engineer\\.or\\.jp/c_topics/", "start": "id=\"MainArea1\"", "end": "id=\"FootArea\""},
+  {"id": "jsea_kakomon2", "site": "日本技術士会", "name": "過去問題（第二次試験・森林部門）", "kind": "links", "url": "https://www.engineer.or.jp/c_categories/index02022233.html", "include": "engineer\\.or\\.jp/c_topics/", "start": "id=\"MainArea1\"", "end": "id=\"FootArea\""},
+  {"id": "jsea_comp_qa", "site": "日本技術士会", "name": "コンピテンシーに関する質問", "kind": "text", "url": "https://www.engineer.or.jp/c_topics/011/011634.html", "start": "技術士に求められる資質能力（コンピテンシー）に関する質問", "end": "このページのお問い合わせ先"},
+  {"id": "jsea_comp_pdf", "site": "日本技術士会", "name": "改訂コンピテンシー（令和8年度 第二次試験の実施について の別紙 PDF）", "kind": "file", "url": "https://www.engineer.or.jp/c_topics/011/attached/attach_11422_2.pdf"},
+  {"id": "mext_bunkakai", "site": "文部科学省", "name": "技術士分科会", "kind": "links", "url": "https://www.mext.go.jp/b_menu/shingi/gijyutu/gijyutu7/index.htm", "include": "mext\\.go\\.jp/(b_menu/shingi/gijyutu/gijyutu7/|content/)", "exclude": "warp\\.ndl\\.go\\.jp|old_index"},
+  {"id": "mext_shiken", "site": "文部科学省", "name": "技術士分科会 試験部会", "kind": "links", "url": "https://www.mext.go.jp/b_menu/shingi/gijyutu/gijyutu7/002/index.html", "include": "mext\\.go\\.jp/(b_menu/shingi/gijyutu/gijyutu7/|content/)", "exclude": "warp\\.ndl\\.go\\.jp|old_index"},
+  {"id": "mext_seido", "site": "文部科学省", "name": "技術士分科会 制度検討特別委員会（第12期）", "kind": "links", "url": "https://www.mext.go.jp/b_menu/shingi/gijyutu/gijyutu7/024/index.html", "include": "mext\\.go\\.jp/(b_menu/shingi/gijyutu/gijyutu7/|content/)", "exclude": "warp\\.ndl\\.go\\.jp|old_index"},
+  {"id": "rinya_hakusho", "site": "林野庁", "name": "森林・林業白書", "kind": "links", "url": "https://www.rinya.maff.go.jp/j/kikaku/hakusyo/index.html", "include": "rinya\\.maff\\.go\\.jp/j/kikaku/hakusyo/"},
+  {"id": "rinya_plan", "site": "林野庁", "name": "森林・林業基本計画", "kind": "links", "url": "https://www.rinya.maff.go.jp/j/kikaku/plan/index.html", "include": "rinya\\.maff\\.go\\.jp/j/kikaku/plan/"}
+ ]
+}

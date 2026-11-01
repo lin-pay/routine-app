@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.routine-app.gwatch</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/nagaoka/.pyenv/versions/3.11.8/bin/python3</string>
+    <string>/Users/nagaoka/gcp-migration/rinpe04naga06/private/routine-app/gwatch.py</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/nagaoka/gcp-migration/rinpe04naga06/private/routine-app</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>/Users/nagaoka</string>
+    <key>PATH</key>
+    <string>/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <!-- 毎日 19:30（Mac の時計＝日本時間）。ブラジルでは 7:30。スリープ中だったときは起きたときに1回動く -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>19</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <!-- 経過は gwatch.py が reports/gwatch.log に書くので、標準出力は捨てる。落ちたときのエラーだけ残す -->
+  <key>StandardOutPath</key>
+  <string>/dev/null</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/nagaoka/gcp-migration/rinpe04naga06/private/routine-app/reports/gwatch.launchd.err</string>
+</dict>
+</plist>

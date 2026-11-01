@@ -297,6 +297,9 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .gq-fb.ok{color:#4ade80;background:rgba(74,222,128,.08)}
 .gq-fb.ng{color:#F0A090;background:rgba(224,82,82,.08)}
 .gq-next{width:100%}
+.gq-xw{width:100%;margin-top:10px;padding:10px 12px;font-size:12px}
+.gq-xw.on{color:var(--accent);border-color:var(--accent)}
+.gq-xn{font-size:11px;color:var(--dim);text-align:center;margin-top:10px}
 .gq-foot{text-align:center;margin-top:16px;font-size:11px}
 .gq-foot a{color:var(--dim)}
 /* PC・iPad: 過去問を解く画面だけ横に広げて問題の画像を大きく出す。横長の画面では選択肢を右に置き、スクロールしても見えるようにする */
@@ -761,7 +764,7 @@ function gStart(mode,keys,title,set){
 function gTick(q){const now=Date.now();if(q.ta)q.el+=Math.min(now-q.ta,G_GAP);q.ta=now;}
 function gEl(q){return q.el+(q.ta?Math.min(Date.now()-q.ta,G_GAP):0);}
 function gHM(ms){const m=Math.floor(ms/60000);return`${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`;}
-function gRunSave(q){if(!S.user)return;try{localStorage.setItem(G_RUN,JSON.stringify({uid:S.user.uid,mode:q.mode,title:q.title,set:q.set,keys:q.keys,i:q.i,pick:q.pick,el:q.el,ta:q.ta}));}catch(e){}}
+function gRunSave(q){if(!S.user)return;try{localStorage.setItem(G_RUN,JSON.stringify({uid:S.user.uid,mode:q.mode,title:q.title,set:q.set,keys:q.keys,i:q.i,pick:q.pick,want:q.want,el:q.el,ta:q.ta}));}catch(e){}}
 function gRunClear(){try{localStorage.removeItem(G_RUN);}catch(e){}}
 function gRunGet(){try{const r=JSON.parse(localStorage.getItem(G_RUN)||'null');return r&&S.user&&r.uid===S.user.uid&&gSets().some(s=>s.id===r.set)?r:null;}catch(e){return null;}}
 function gResume(r){S.gQ={...r,ta:Date.now()};delete S.gQ.uid;S.gView='quiz';S.gZoom=false;gRunSave(S.gQ);render();gPrefetch();document.getElementById('app').scrollTop=0;}
@@ -794,11 +797,11 @@ function gNext(){
 function gFinish(){
   const q=S.gQ,ans=q.keys.filter(k=>q.pick[k]),c=ans.filter(k=>gRight(gFind(k).q,q.pick[k])).length;
   if(q.mode==='set'){gTick(q);q.ta=null;gRunClear();gTestAdd(q);}
-  q.result={c,n:ans.length};q.xs=ans.filter(k=>!gRight(gFind(k).q,q.pick[k]));q.asked={};gXWatch(q.xs);
+  const w=q.want||{};q.result={c,n:ans.length};q.xs=ans.filter(k=>w[k]||!gRight(gFind(k).q,q.pick[k]));q.asked=q.asked||{};gXWatch(q.xs);
   S.gView='done';render();document.getElementById('app').scrollTop=0;
 }
 // 解説: 間違えた問題は Mac の gexplain.mjs が Claude で作り、users/{uid}/gx/{k} に置く。結果画面ではそれを見張って、できしだい出す
-// 正解した問題は、結果画面で押すと出す（まだ無ければ data/gxreq で頼む）
+// 正解した問題は、答えたあとに「解説を見る」を押しておくと（gXWant）、結果画面で間違えた問題と一緒に出す。結果画面で押しても出せる（まだ無ければ data/gxreq で頼む）
 function gXWatch(keys){
   if(!S.user)return;
   keys.forEach(k=>{if(S.gXU[k])return;S.gXU[k]=onSnapshot(doc(db,'users',S.user.uid,'gx',k),s=>{S.gX[k]=s.exists()?s.data():null;if(S.gView==='done')render();},()=>{});});
@@ -807,6 +810,23 @@ function gXStop(){Object.values(S.gXU).forEach(u=>{try{u();}catch(e){}});S.gXU={
 async function gXReq(k){
   const q=S.gQ;if(!S.user||!q)return;q.asked[k]=1;render();
   try{await setDoc(doc(db,'users',S.user.uid,'data','gxreq'),{q:{[k]:Date.now()}},{merge:true});}catch(e){q.asked[k]=0;toast('頼めませんでした');}
+}
+// 答えたあとの「解説を見る」: 結果画面に出す問題に入れる。解説がまだ無ければ（作れなかったときも）その場で頼み、解き終わるまでに Mac が作っておく。
+// できている・作っている途中なら頼まない（頼むと作り直しになる）。もう一度押すと取り消し（頼んだ分はそのまま）
+async function gXWant(k){
+  const q=S.gQ;if(!S.user||!q||!q.pick[k])return;
+  q.want=q.want||{};q.asked=q.asked||{};
+  if(q.want[k])delete q.want[k];else q.want[k]=1;
+  if(q.mode==='set')gRunSave(q);
+  render();
+  if(!q.want[k]||q.asked[k])return;
+  gXWatch([k]);
+  try{
+    const s=await getDoc(doc(db,'users',S.user.uid,'gx',k)),x=s.exists()?s.data():null;
+    if(x&&x.s!=='err')return;
+    q.asked[k]=1;
+    await setDoc(doc(db,'users',S.user.uid,'data','gxreq'),{q:{[k]:Date.now()}},{merge:true});
+  }catch(e){q.asked[k]=0;}
 }
 // 今日 G_GOAL 問に達したら、ルーティンの「技術士」（link:'gq'）に✓を付ける
 function gAutoTask(){
@@ -1093,7 +1113,7 @@ function renderGQuiz(){
     <div class="tsb" style="margin:0 0 12px"><div class="tsf" style="width:${Math.round((q.i+(pk?1:0))/q.keys.length*100)}%"></div></div>
     <div class="gq-body"><div class="gq-l">${img}</div><div class="gq-r">
     <div class="gq-cs">${[1,2,3,4,5].map(n=>`<button class="gq-c${pk?(gRight(f.q,n)?' ok':n===pk?' ng':''):n===q.tmp?' sel':''}" data-a="gAns" data-v="${n}" ${pk?'disabled':''}>${CIRC[n-1]}</button>`).join('')}</div>
-    ${pk?`<div class="gq-fb ${ok?'ok':'ng'}">${ok?'⭕ 正解':'❌ 不正解'}　正解は ${gAnsStr(f.q)}${Array.isArray(f.q.a)?'（どれも正解扱い）':''}</div><button class="bs gq-next" data-a="gNext">${q.i<q.keys.length-1?'次へ ▶':'結果を見る'}</button>`
+    ${pk?`<div class="gq-fb ${ok?'ok':'ng'}">${ok?'⭕ 正解':'❌ 不正解'}　正解は ${gAnsStr(f.q)}${Array.isArray(f.q.a)?'（どれも正解扱い）':''}</div><button class="bs gq-next" data-a="gNext">${q.i<q.keys.length-1?'次へ ▶':'結果を見る'}</button>${ok?`<button class="psb gq-xw${(q.want||{})[k]?' on':''}" data-a="gXWant" data-v="${k}">${(q.want||{})[k]?'✓ 最後に解説を出します（もう一度押すと取り消し）':'📝 解説を見る（最後にまとめて出します）'}</button>`:'<div class="gq-xn">解説は最後にまとめて出ます</div>'}`
       :`<button class="bs gq-next" data-a="gConfirm" ${q.tmp?'':'disabled'}>${q.tmp?`${CIRC[q.tmp-1]} で確定`:'選んでから確定'}</button>`}
     <div class="gq-kb">キーボード: 1〜5 で選ぶ、Enter で確定・次へ</div>
     <div class="gq-foot"><a href="${f.s.pdf}#page=${f.q.p}" target="_blank" rel="noopener">原本PDF（日本技術士会）${f.q.p}ページ ↗</a>${pk&&gAnsUrl(f.s)?`<br><a href="${gAnsUrl(f.s)}" target="_blank" rel="noopener">正答の原本（日本技術士会）↗</a>`:''}</div>
@@ -1112,7 +1132,7 @@ function renderGDone(){
     <div class="scs" style="text-align:center;margin:-10px 0 6px">${r.n<q.keys.length?`${q.keys.length}問中 ${r.n}問に解答 ・ `:''}合格ラインは各科目50%</div>
     ${R?`<div class="note" style="margin-top:4px">${R.t}${grp}${tm}</div>`:''}
     <div class="gq-rl">${ans.map(k=>{const f=gFind(k),o=gRight(f.q,q.pick[k]),lb=`${o?'○':'×'} ${esc(f.s.ys)} ${G_SUBJ[f.s.s]} ${f.q.no}`;return o&&!(q.xs||[]).includes(k)?`<button class="gq-ri ok" data-a="gXShow" data-v="${k}">${lb}</button>`:`<span class="gq-ri ${o?'ok':'ng'}">${lb}</span>`;}).join('')}</div>
-    ${ans.length>wr.length?`<div class="scs" style="margin:-8px 0 14px">○ の問題も、押すと解説を出せます（勘で当たった問題など）</div>`:''}
+    ${ans.some(k=>!(q.xs||[]).includes(k))?`<div class="scs" style="margin:-8px 0 14px">○ の問題も、押すと解説を出せます（勘で当たった問題など）</div>`:''}
     ${wr.length?`<button class="pbtn" data-a="gRetry">🔁 間違えた${wr.length}問をもう一度</button>`:''}
     ${(q.xs||[]).length?`<div class="sec-t">解説</div>${q.xs.map(k=>renderGX(q,k)).join('')}<div class="note">Claude（AI）が Mac で作った解説です。誤りがありえるので、気になるところは原本や<a href="${WP_URL}${G_WP[0].p}hakusyo/search.html" target="_blank" rel="noopener" style="color:var(--accent)">白書の検索 ↗</a>で確かめてください。公式に出ているのは正答の番号だけで、解説はありません。</div>`:''}
     <div class="fa"><button class="bc" data-a="gHome" style="flex:1">← 戻る</button></div></div>`;
@@ -1496,6 +1516,7 @@ function handleA(e){
     case 'gHome':gXStop();S.gQ=null;S.gJE=null;S.gView='home';render();document.getElementById('app').scrollTop=0;break;
     case 'gXShow':{const q=S.gQ;if(q&&!q.xs.includes(v)){q.xs.push(v);gXWatch([v]);render();}}break;
     case 'gXReq':gXReq(v);break;
+    case 'gXWant':gXWant(v);break;
     case 'gZoom':S.gZoom=!S.gZoom;render();break;
     case 'gOrig':S.gOrig=!S.gOrig;render();break;
     case 'gRetryImg':{const k=S.gQ&&S.gQ.keys[S.gQ.i];if(k){delete S.gImg[k];gLoadImg(k);render();}}break;

@@ -2,7 +2,8 @@
  * 技術士の過去問の解説を Claude で作る常駐スクリプト（Mac の LaunchAgent com.routine-app.gexplain で動かす）
  *
  *   - users/{uid}/data/gprog を見張り、間違えたことのある問題（r に x がある）で解説がまだないものを、1問ずつ作る
- *   - アプリの結果画面で頼まれた問題（users/{uid}/data/gxreq の q[k] = 頼んだ時刻）も作る（正解した問題・作り直し）
+ *   - アプリで頼まれた問題（users/{uid}/data/gxreq の q[k] = 頼んだ時刻）も作る（正解した問題・作り直し）。頼むのは、答えたあとの
+ *     「解説を見る」（まだ解説が無いか作れなかった問題だけ）と、結果画面の「解説を頼む」「もう一度頼む」
  *   - 問題の画像（users/{uid}/gq/{k}）と公式の正答（data/gq_idx）を claude -p に渡す。Claude Code の既定のシステム
  *     プロンプトとツールは使わない（--system-prompt・--tools ""）ので、1問 約3千トークンの入力で済む
  *   - 結果は users/{uid}/gx/{k} = { s:'run'|'ok'|'err', text, at, model, cost, ms }。アプリはこれを表示する

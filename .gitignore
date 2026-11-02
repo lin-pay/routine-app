@@ -4,3 +4,5 @@
 !words.json
 node_modules/
 reports/
+screen_time_pin.md
+__pycache__/

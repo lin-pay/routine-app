@@ -300,6 +300,7 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .gq-xw{width:100%;margin-top:10px;padding:10px 12px;font-size:12px}
 .gq-xw.on{color:var(--accent);border-color:var(--accent)}
 .gq-xn{font-size:11px;color:var(--dim);text-align:center;margin-top:10px}
+.gq-nr{font-size:11px;font-weight:500;color:var(--dim);margin-top:4px}
 .gq-foot{text-align:center;margin-top:16px;font-size:11px}
 .gq-foot a{color:var(--dim)}
 /* PC・iPad: 過去問を解く画面だけ横に広げて問題の画像を大きく出す。横長の画面では選択肢を右に置き、スクロールしても見えるようにする */
@@ -379,6 +380,7 @@ const G_EST=true;
 const G_SUBJ={shinrin:'森林',kiso:'基礎',tekisei:'適性'};
 const G_GOAL=10;                 // 1日の目標問題数。達するとルーティンの「技術士」（link:'gq'）に✓
 const G_BOX=[0,1,3,7,14,30,60,120,240];  // 正解を重ねるごとに次の出題までの日数をのばす（60日で頭打ちにすると、覚えた問題の復習だけで毎日の10問が埋まる）
+const G_MISS=3;                  // 間違えたら箱3（G_BOX[3]=7日後）。翌日に出すと答えの番号を覚えていて意味がない（2026-11-02 ユーザーの指摘）
 // 年度別の通しの結果に出す、本番の時間（分）・解答数・合格ライン
 const G_RULE={shinrin:{min:120,ans:25,t:'本番は35問から25問を選んで解答し、13問（26点）以上で合格'},kiso:{min:60,ans:15,t:'本番は5つの群から3問ずつ、計15問を選んで解答し、8問以上で合格'},tekisei:{min:60,ans:15,t:'本番も15問すべてを解答し、8問以上で合格'}};
 const G_GRP=['設計・計画','情報・論理','解析','材料・化学・バイオ','環境・エネルギー・技術'];
@@ -431,7 +433,7 @@ function startSync(uid){
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','reports'),s=>{if(s.exists()){S.reports=s.data().items||[];}render();}));
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','settings'),s=>{const d=s.exists()?s.data():{},def=defSettings();S.settings={notif:Object.assign(def.notif,d.notif||{}),pushSubs:d.pushSubs||{}};render();}));
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','gq_idx'),s=>{S.gIdx=s.exists()?s.data():null;render();}));
-  S.unsub.push(onSnapshot(doc(db,'users',uid,'data','gprog'),s=>{const d=s.exists()?s.data():{};S.gP={q:d.q||{},days:d.days||{},tests:d.tests||[]};render();}));
+  S.unsub.push(onSnapshot(doc(db,'users',uid,'data','gprog'),s=>{const d=s.exists()?s.data():{};S.gP={q:d.q||{},days:d.days||{},tests:d.tests||[]};if(gFixMiss())saveG();render();}));
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','gjournal'),s=>{S.gJ=s.exists()?s.data().items||[]:[];render();}));
 }
 async function saveR(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','tasks'),{items:S.tasks});}catch(e){}}
@@ -724,15 +726,27 @@ function gDailyKeys(){
   for(let i=0;pick.length<need&&i<need*order.length;i++){const l=fr[order[i%order.length]];if(l.length)pick.push(l.shift());}
   return[...due,...pick];
 }
+function gAddD(ds,n){const d=parseD(ds);d.setDate(d.getDate()+n);return fmtD(d);}
+// 記録したら true。同じ日にもう一度解いた分（間違えた問題をもう一度・通しや苦手で重なったもの）は、答えを覚えているので記録しない（予定も履歴も今日の問題数も変えない）
 function gRecord(k,ok){
   const td=fmtD(new Date()),p=S.gP.q[k]||{n:0,c:0,b:0,r:''};
+  if(p.l===td)return false;
   p.n++;if(ok)p.c++;
-  // 初めてで正解なら14日後（知っている問題に早い復習はいらない。まぐれ当たりは2週間後に確かめる）、そのあとは正解のたびに間隔をのばす。間違えたら翌日に戻す
-  p.b=ok?Math.min(p.b?p.b+1:4,G_BOX.length-1):1;
-  const d=new Date();d.setDate(d.getDate()+(ok?G_BOX[p.b]:1));
-  p.due=fmtD(d);p.l=td;p.r=(p.r+(ok?'o':'x')).slice(-10);
+  // 初めてで正解なら14日後（知っている問題に早い復習はいらない。まぐれ当たりは2週間後に確かめる）、そのあとは正解のたびに間隔をのばす。間違えたら1週間後に戻す。
+  // 期日より前に解いて正解したとき（通し・苦手で先に出た）は、期日も間隔も変えない（覚えている答えで間隔がのびないように）
+  if(!ok){p.b=G_MISS;p.due=gAddD(td,G_BOX[G_MISS]);}
+  else if(!p.b||!p.due||p.due<=td){p.b=Math.min(p.b?p.b+1:4,G_BOX.length-1);p.due=gAddD(td,G_BOX[p.b]);}
+  p.l=td;p.r=(p.r+(ok?'o':'x')).slice(-10);
   S.gP.q[k]=p;
   const day=S.gP.days[td]||{n:0,c:0};day.n++;if(ok)day.c++;S.gP.days[td]=day;
+  return true;
+}
+// 2026-11-02 より前の決まり（間違えたら翌日）で入っている予定を1週間後に直す。最後が×で、期日が最後に解いた日の翌日のもの。
+// 直したら true（呼んだ側で保存）。何度呼んでも同じ（古いアプリが翌日で記録しても、次に開いたときに直る）
+function gFixMiss(){
+  let n=0;
+  Object.values(S.gP.q).forEach(p=>{if(p&&p.l&&p.r&&p.r.slice(-1)==='x'&&p.due===gAddD(p.l,1)){p.b=G_MISS;p.due=gAddD(p.l,G_BOX[G_MISS]);n++;}});
+  return n>0;
 }
 function gStats(){
   const all=gAll(),Q=S.gP.q,td=fmtD(new Date());
@@ -784,7 +798,8 @@ function gSel(c){
 function gAnswer(c){
   const q=S.gQ;if(!q)return;const k=q.keys[q.i],f=gFind(k);if(!f||q.pick[k])return;
   q.pick[k]=c;const ok=gRight(f.q,c);
-  gRecord(k,ok);saveG();
+  if(!gRecord(k,ok)){q.nr=q.nr||{};q.nr[k]=1;}
+  saveG();
   if(q.mode==='set'){gTick(q);gRunSave(q);}
   if(navigator.vibrate)try{navigator.vibrate(ok?12:[30,40,30]);}catch(e){}
   gAutoTask();render();
@@ -1120,7 +1135,7 @@ function renderGQuiz(){
     <div class="tsb" style="margin:0 0 12px"><div class="tsf" style="width:${Math.round((q.i+(pk?1:0))/q.keys.length*100)}%"></div></div>
     <div class="gq-body"><div class="gq-l">${img}</div><div class="gq-r">
     <div class="gq-cs">${[1,2,3,4,5].map(n=>`<button class="gq-c${pk?(gRight(f.q,n)?' ok':n===pk?' ng':''):n===q.tmp?' sel':''}" data-a="gAns" data-v="${n}" ${pk?'disabled':''}>${CIRC[n-1]}</button>`).join('')}</div>
-    ${pk?`<div class="gq-fb ${ok?'ok':'ng'}">${ok?'⭕ 正解':'❌ 不正解'}　正解は ${gAnsStr(f.q)}${Array.isArray(f.q.a)?'（どれも正解扱い）':''}</div><button class="bs gq-next" data-a="gNext">${q.i<q.keys.length-1?'次へ ▶':'結果を見る'}</button>${ok&&gXSaved(k)&&!(q.want||{})[k]?'<div class="gq-xn">📝 前に作った解説があるので、最後にまた出します</div>':ok?`<button class="psb gq-xw${(q.want||{})[k]?' on':''}" data-a="gXWant" data-v="${k}">${(q.want||{})[k]?'✓ 最後に解説を出します（もう一度押すと取り消し）':'📝 解説を見る（最後にまとめて出します）'}</button>`:'<div class="gq-xn">解説は最後にまとめて出ます</div>'}`
+    ${pk?`<div class="gq-fb ${ok?'ok':'ng'}">${ok?'⭕ 正解':'❌ 不正解'}　正解は ${gAnsStr(f.q)}${Array.isArray(f.q.a)?'（どれも正解扱い）':''}${(q.nr||{})[k]?'<div class="gq-nr">今日すでに解いた問題なので、記録しません</div>':''}</div><button class="bs gq-next" data-a="gNext">${q.i<q.keys.length-1?'次へ ▶':'結果を見る'}</button>${ok&&gXSaved(k)&&!(q.want||{})[k]?'<div class="gq-xn">📝 前に作った解説があるので、最後にまた出します</div>':ok?`<button class="psb gq-xw${(q.want||{})[k]?' on':''}" data-a="gXWant" data-v="${k}">${(q.want||{})[k]?'✓ 最後に解説を出します（もう一度押すと取り消し）':'📝 解説を見る（最後にまとめて出します）'}</button>`:'<div class="gq-xn">解説は最後にまとめて出ます</div>'}`
       :`<button class="bs gq-next" data-a="gConfirm" ${q.tmp?'':'disabled'}>${q.tmp?`${CIRC[q.tmp-1]} で確定`:'選んでから確定'}</button>`}
     <div class="gq-kb">キーボード: 1〜5 で選ぶ、Enter で確定・次へ</div>
     <div class="gq-foot"><a href="${f.s.pdf}#page=${f.q.p}" target="_blank" rel="noopener">原本PDF（日本技術士会）${f.q.p}ページ ↗</a>${pk&&gAnsUrl(f.s)?`<br><a href="${gAnsUrl(f.s)}" target="_blank" rel="noopener">正答の原本（日本技術士会）↗</a>`:''}</div>

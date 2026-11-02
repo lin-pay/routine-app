@@ -745,7 +745,12 @@ function gRecord(k,ok){
 // 直したら true（呼んだ側で保存）。何度呼んでも同じ（古いアプリが翌日で記録しても、次に開いたときに直る）
 function gFixMiss(){
   let n=0;
-  Object.values(S.gP.q).forEach(p=>{if(p&&p.l&&p.r&&p.r.slice(-1)==='x'&&p.due===gAddD(p.l,1)){p.b=G_MISS;p.due=gAddD(p.l,G_BOX[G_MISS]);n++;}});
+  Object.values(S.gP.q).forEach(p=>{
+    if(!p||!p.l||!p.r)return;
+    if(p.r.slice(-1)==='x'&&p.due===gAddD(p.l,1)){p.b=G_MISS;p.due=gAddD(p.l,G_BOX[G_MISS]);n++;}
+    // 翌日に出て正解（覚えていた答え）→ 箱2・3日後、になっているものは、間違えた日（最後に解いた日の前日）の1週間後に
+    else if(p.b===2&&p.r.slice(-2)==='xo'&&p.due===gAddD(p.l,3)){p.b=G_MISS;p.due=gAddD(p.l,G_BOX[G_MISS]-1);n++;}
+  });
   return n>0;
 }
 function gStats(){

@@ -408,7 +408,7 @@ let S={user:null,authOk:false,dataOk:false,
   // settings / notifications
   settings:defSettings(),
   // 技術士: 過去問の索引・解いた記録・業務記録、ドリル中の状態、問題画像のキャッシュ
-  gIdx:null,gP:{q:{},days:{},tests:[]},gJ:[],gView:'home',gQ:null,gImg:{},gJE:null,gZoom:false,gOrig:false,gX:{},gXU:{},
+  gIdx:null,gP:{q:{},days:{},tests:[]},gJ:[],gView:'home',gQ:null,gImg:{},gJE:null,gZoom:false,gOrig:false,gX:{},gXU:{},gRv:{},
   // global
   tab:'routine',toast:null,cele:null,unsub:[]};
 let toastT,celeT;
@@ -435,6 +435,7 @@ function startSync(uid){
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','gq_idx'),s=>{S.gIdx=s.exists()?s.data():null;render();}));
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','gprog'),s=>{const d=s.exists()?s.data():{};S.gP={q:d.q||{},days:d.days||{},tests:d.tests||[]};if(gFixMiss())saveG();render();}));
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','gjournal'),s=>{S.gJ=s.exists()?s.data().items||[]:[];render();}));
+  S.unsub.push(onSnapshot(doc(db,'users',uid,'data','grev'),s=>{S.gRv=(s.exists()&&s.data().q)||{};render();}));
 }
 async function saveR(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','tasks'),{items:S.tasks});}catch(e){}}
 async function saveC(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','completions'),{entries:S.comps});}catch(e){}}
@@ -442,8 +443,10 @@ async function saveF(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'dat
 async function saveS(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','settings'),S.settings);}catch(e){console.error(e);}}
 async function saveG(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','gprog'),S.gP);}catch(e){console.error(e);}}
 async function saveJ(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','gjournal'),{items:S.gJ});}catch(e){console.error(e);}}
+// 要復習リストは gprog と別の文書にする（gprog は q・days・tests だけを読み書きする古い版のアプリに消されないように）
+async function saveGRv(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','grev'),{q:S.gRv});}catch(e){console.error(e);toast('保存できませんでした');}}
 
-onAuthStateChanged(auth,u=>{S.user=u;S.authOk=true;if(u)startSync(u.uid);else{S.dataOk=false;S.tasks=[];S.comps={};S.fit={workouts:{},runs:{},weight:{},meals:{}};S.settings=defSettings();S.gIdx=null;S.gP={q:{},days:{},tests:[]};S.gJ=[];S.gQ=null;S.gImg={};gXStop();S.gX={};S.gView='home';render();}});
+onAuthStateChanged(auth,u=>{S.user=u;S.authOk=true;if(u)startSync(u.uid);else{S.dataOk=false;S.tasks=[];S.comps={};S.fit={workouts:{},runs:{},weight:{},meals:{}};S.settings=defSettings();S.gIdx=null;S.gP={q:{},days:{},tests:[]};S.gJ=[];S.gQ=null;S.gImg={};gXStop();S.gX={};S.gRv={};S.gView='home';render();}});
 getRedirectResult(auth).catch(()=>{});
 async function login(){const p=new GoogleAuthProvider();try{await signInWithPopup(auth,p);}catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/popup-closed-by-user')await signInWithRedirect(auth,p);}}
 async function logout(){S.unsub.forEach(u=>u());S.unsub=[];await signOut(auth);}
@@ -713,9 +716,10 @@ function gKeysOf(s){return s.qs.filter(gOk).map(q=>q.k);}
 function gAll(){return gSets().flatMap(gKeysOf);}
 function gDays(ds){return Math.round((parseD(ds)-parseD(fmtD(new Date())))/864e5);}
 function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-// 期日が来た復習。前回間違えた問題を先に、あとは期日の古い順（復習がたまっても、間違えた問題が後回しにならないように）
-function gDue(){const td=fmtD(new Date()),Q=S.gP.q,x=k=>Q[k].r.slice(-1)==='x'?0:1;return gAll().filter(k=>Q[k]&&Q[k].due<=td).sort((a,b)=>x(a)-x(b)||(Q[a].due<Q[b].due?-1:Q[a].due>Q[b].due?1:0));}
+// 期日が来た復習。前回間違えた問題と要復習リストの問題を先に、あとは期日の古い順（復習がたまっても、間違えた問題が後回しにならないように）
+function gDue(){const td=fmtD(new Date()),Q=S.gP.q,x=k=>Q[k].r.slice(-1)==='x'||S.gRv[k]?0:1;return gAll().filter(k=>Q[k]&&Q[k].due<=td).sort((a,b)=>x(a)-x(b)||(Q[a].due<Q[b].due?-1:Q[a].due>Q[b].due?1:0));}
 function gWeak(){const Q=S.gP.q;return gAll().filter(k=>Q[k]&&Q[k].r.slice(-1)==='x');}
+function gRvKeys(){return gAll().filter(k=>S.gRv[k]);}
 // 今日の10問: 復習の期日が来た問題を先に、残りは新しい問題を 森林5:基礎3:適性2 で混ぜる
 function gDailyKeys(){
   const due=gDue().slice(0,G_GOAL),need=G_GOAL-due.length;
@@ -817,7 +821,7 @@ function gNext(){
 function gFinish(){
   const q=S.gQ,ans=q.keys.filter(k=>q.pick[k]),c=ans.filter(k=>gRight(gFind(k).q,q.pick[k])).length;
   if(q.mode==='set'){gTick(q);q.ta=null;gRunClear();gTestAdd(q);}
-  const w=q.want||{};q.result={c,n:ans.length};q.xs=ans.filter(k=>w[k]||!gRight(gFind(k).q,q.pick[k]));q.asked=q.asked||{};gXWatch(ans);
+  const w=q.want||{};q.result={c,n:ans.length};q.xs=ans.filter(k=>w[k]||S.gRv[k]||!gRight(gFind(k).q,q.pick[k]));q.asked=q.asked||{};gXWatch(ans);
   S.gView='done';render();document.getElementById('app').scrollTop=0;
 }
 // 解説: 間違えた問題は Mac の gexplain.mjs が Claude で作り、users/{uid}/gx/{k} に置く。結果画面ではそれを見張って、できしだい出す
@@ -831,7 +835,8 @@ function gXWatch(keys){
 }
 // 一度できた解説は gx/{k} に残っていて、作り直さない。もう一度解いたときは、正解しても結果画面にまた出す
 function gXSaved(k){const x=S.gX[k];return!!(x&&x.s==='ok');}
-// 結果画面の解説の欄に出す問題: 間違えた問題・「解説を見る」を押した問題（q.xs）と前にできた解説がある問題を解いた順に、そのあとに結果画面で押した問題（q.xt）を押した順に
+// 結果画面の解説の欄に出す問題: 間違えた問題・「解説を見る」を押した問題・解き終えたときに要復習リストにあった問題（q.xs）と前にできた解説がある問題を解いた順に、そのあとに結果画面で押した問題（q.xt）を押した順に
+// （要復習リストは解き終えたときの分で決める。結果画面で外しても、その問題の欄は消えない）
 function gXList(q){const t=q.xt||[];return[...q.keys.filter(k=>q.pick[k]&&!t.includes(k)&&((q.xs||[]).includes(k)||gXSaved(k))),...t];}
 function gXStop(){Object.values(S.gXU).forEach(u=>{try{u();}catch(e){}});S.gXU={};}
 async function gXReq(k){
@@ -854,6 +859,25 @@ async function gXWant(k){
     q.asked[k]=1;
     await setDoc(doc(db,'users',S.user.uid,'data','gxreq'),{q:{[k]:Date.now()}},{merge:true});
   }catch(e){q.asked[k]=0;}
+}
+// 要復習リスト（data/grev の q[k]）: 解説を読んで、まだ分かっていないと思った問題を自分で入れる。外すまで残る。
+// 入れると間違えた問題と同じ扱いで、1週間後（期日がそれより早ければそのまま）の今日の10問に出し、期日が来た復習の中でも先に出す。
+// 入れる前の予定（b・due）と最後に解いた日（l）を残しておき、そのあと解かないうちに外したら予定を元に戻す
+function gRvToggle(k){
+  if(!S.user||!gFind(k))return;
+  const p=S.gP.q[k],r=S.gRv[k];
+  if(r){
+    if(p&&r.l&&p.l===r.l&&(p.b!==r.b||p.due!==r.due)){p.b=r.b;p.due=r.due;saveG();}
+    delete S.gRv[k];toast('要復習リストから外しました');
+  }else{
+    S.gRv[k]=p&&p.l&&p.due?{at:Date.now(),b:p.b||0,due:p.due,l:p.l}:{at:Date.now()};
+    if(p&&p.l&&p.due){
+      const nd=gAddD(fmtD(new Date()),G_BOX[G_MISS]),b=Math.min(p.b||G_MISS,G_MISS),due=p.due<nd?p.due:nd;
+      if(b!==p.b||due!==p.due){p.b=b;p.due=due;saveG();}
+    }
+    toast('要復習リストに入れました');
+  }
+  saveGRv();render();
 }
 // 今日 G_GOAL 問に達したら、ルーティンの「技術士」（link:'gq'）に✓を付ける
 function gAutoTask(){
@@ -1084,7 +1108,7 @@ function renderGHome(){
     <div class="header"><div><div class="date-label">技術士 第一次試験まで${G_EST?'（予定）':''}</div><div class="greeting">あと ${gDays(ex.d)} 日</div></div><div style="display:flex;gap:6px"><button class="hbtn" data-a="gWP" title="森林・林業白書">📗</button><button class="hbtn" data-a="gJList" title="業務記録">📝</button></div></div>`;
   if(!gSets().length)h+=`<div class="note">過去問のデータがまだ入っていません。</div>`;
   else{
-    const st=gStats(),dk=gDailyKeys(),dueN=dk.filter(k=>S.gP.q[k]).length,newN=dk.length-dueN,weak=gWeak().length;
+    const st=gStats(),dk=gDailyKeys(),dueN=dk.filter(k=>S.gP.q[k]).length,newN=dk.length-dueN,weak=gWeak().length,rv=gRvKeys().length;
     h+=`<button class="gq-go" data-a="gDaily"><div class="gq-go-t">▶ 今日の${G_GOAL}問</div><div class="gq-go-s">${[dueN?`復習 ${dueN}問`:'',newN?`新しい問題 ${newN}問`:''].filter(Boolean).join('・')||'出せる問題がありません'}</div></button>
     <div class="gq-today"><div class="tsb"><div class="tsf" style="width:${Math.min(100,Math.round(st.today.n/G_GOAL*100))}%"></div></div><div class="tsm"><span>今日 ${st.today.n}問${st.today.n>=G_GOAL?' ✓':''}</span>${st.today.n?`<span>正答 ${Math.round(st.today.c/st.today.n*100)}%</span>`:''}<span>🔥 ${st.st}日連続</span>${st.due>dueN?`<span>復習待ち ${st.due}問</span>`:''}</div></div>
     ${renderGRun()}
@@ -1095,6 +1119,7 @@ function renderGHome(){
     <div class="sec-t">科目別（最後に解いたときの正答率）</div>
     ${Object.keys(G_SUBJ).map(s=>{const x=gAcc(gSets().filter(z=>z.s===s).flatMap(gKeysOf));return`<div class="tsr"><div class="tsh"><div class="tsn">${G_SUBJ[s]}${s==='shinrin'?' <span style="font-size:10px;color:var(--dim);font-weight:500">専門</span>':''}</div><div class="tsv">${x.seen?x.pct+'%':'—'}</div></div><div class="tsb"><div class="tsf" style="width:${x.seen?x.pct:0}%"></div></div><div class="tsm"><span>${x.seen}/${x.n}問 解いた</span><span>合格ライン 50%</span></div></div>`;}).join('')}
     ${weak?`<button class="pbtn" data-a="gWeak" style="margin-top:6px">🔁 間違えたままの問題（${weak}問）</button>`:''}
+    ${rv?`<button class="pbtn" data-a="gRvGo"${weak?'':' style="margin-top:6px"'}>📌 要復習リスト（${rv}問）</button>`:''}
     <div class="sec-t">年度別に通しで解く</div>
     ${renderGGrid()}`;
   }
@@ -1136,7 +1161,7 @@ function renderGQuiz(){
     :im.err?`<div class="gq-ph"><div class="swd">問題の画像を読み込めませんでした</div><button class="psb" data-a="gRetryImg">もう一度読み込む</button></div>`
     :`<div class="gq-imgw${S.gZoom?' zoom':''}"><img class="gq-img${S.gOrig?' orig':''}" src="${im.img}" alt="${esc(lab)}" data-a="gZoom"></div><div class="gq-hint">画像をタップで拡大／縮小</div>`;
   return`<div class="app-inner fv">
-    <div class="gq-top"><button class="hbtn" data-a="gQuit" title="やめる">✕</button><div class="gq-tt"><div class="gq-t1">${esc(q.title)}<span>${q.i+1} / ${q.keys.length}</span>${q.mode==='set'?`<span id="gTm">⏱ ${gHM(gEl(q))}</span>`:''}</div><div class="gq-t2">${esc(lab)}${hist?` ・ これまで ${hist.replace(/o/g,'○').replace(/x/g,'×')}`:''}</div></div><button class="hbtn" data-a="gOrig" title="白黒を反転">◐</button></div>
+    <div class="gq-top"><button class="hbtn" data-a="gQuit" title="やめる">✕</button><div class="gq-tt"><div class="gq-t1">${esc(q.title)}<span>${q.i+1} / ${q.keys.length}</span>${q.mode==='set'?`<span id="gTm">⏱ ${gHM(gEl(q))}</span>`:''}</div><div class="gq-t2">${esc(lab)}${hist?` ・ これまで ${hist.replace(/o/g,'○').replace(/x/g,'×')}`:''}${S.gRv[k]?' ・ 📌 要復習':''}</div></div><button class="hbtn" data-a="gOrig" title="白黒を反転">◐</button></div>
     <div class="tsb" style="margin:0 0 12px"><div class="tsf" style="width:${Math.round((q.i+(pk?1:0))/q.keys.length*100)}%"></div></div>
     <div class="gq-body"><div class="gq-l">${img}</div><div class="gq-r">
     <div class="gq-cs">${[1,2,3,4,5].map(n=>`<button class="gq-c${pk?(gRight(f.q,n)?' ok':n===pk?' ng':''):n===q.tmp?' sel':''}" data-a="gAns" data-v="${n}" ${pk?'disabled':''}>${CIRC[n-1]}</button>`).join('')}</div>
@@ -1172,7 +1197,10 @@ function renderGX(q,k){
     :x&&x.s==='err'&&!q.asked[k]?'<div class="swd">解説を作れませんでした。</div><button class="psb" data-a="gXReq" data-v="'+k+'" style="margin-top:8px">もう一度頼む</button>'
     :o&&!q.asked[k]?'<button class="psb" data-a="gXReq" data-v="'+k+'">解説を頼む</button>'
     :'<div class="swd">解説を待っています（Mac で1問ずつ作ります。1問15秒ほど）</div>';
-  return`<div class="tsr gx"><div class="tsh"><div class="tsn">${o?'○':'×'} ${esc(f.s.ys)} ${G_SUBJ[f.s.s]} ${f.q.no}</div><div class="tsv" style="font-size:11px">${pk?`あなた ${CIRC[pk-1]} ・ `:''}正答 ${gAnsStr(f.q)}</div></div><div style="margin-top:8px">${body}</div><div class="gq-foot" style="text-align:left;margin-top:8px;line-height:1.9"><a href="${f.s.pdf}#page=${f.q.p}" target="_blank" rel="noopener">原本PDF（日本技術士会）${f.q.p}ページ ↗</a>${gAnsUrl(f.s)?`<br><a href="${gAnsUrl(f.s)}" target="_blank" rel="noopener">正答の原本（日本技術士会）↗</a>`:''}</div></div>`;
+  // 要復習リストに入れる・外す。入っていれば次に出る日（今日の10問）も出す
+  const rv=S.gRv[k],p=S.gP.q[k],td=fmtD(new Date());
+  const rvb=`<button class="psb gq-xw gx-rv${rv?' on':''}" data-a="gRv" data-v="${k}">${rv?'✓ 要復習リストに入っています（押すと外す）':'📌 要復習リストに入れる'}</button>${rv&&p&&p.due?`<div class="gq-xn">次の復習は ${p.due<=td?'今日':gMd(p.due,td)}（今日の10問）。ホームの「📌 要復習リスト」からも解けます</div>`:''}`;
+  return`<div class="tsr gx"><div class="tsh"><div class="tsn">${o?'○':'×'} ${esc(f.s.ys)} ${G_SUBJ[f.s.s]} ${f.q.no}</div><div class="tsv" style="font-size:11px">${pk?`あなた ${CIRC[pk-1]} ・ `:''}正答 ${gAnsStr(f.q)}</div></div><div style="margin-top:8px">${body}</div>${rvb}<div class="gq-foot" style="text-align:left;margin-top:8px;line-height:1.9"><a href="${f.s.pdf}#page=${f.q.p}" target="_blank" rel="noopener">原本PDF（日本技術士会）${f.q.p}ページ ↗</a>${gAnsUrl(f.s)?`<br><a href="${gAnsUrl(f.s)}" target="_blank" rel="noopener">正答の原本（日本技術士会）↗</a>`:''}</div></div>`;
 }
 // 森林・林業白書: 年度ごとに概要・全文・検索・PDF と、全文（HTML 版）の章へのリンク。どれも林野庁のサイトを開く
 function renderGWP(){
@@ -1543,6 +1571,8 @@ function handleA(e){
     case 'gHome':gXStop();S.gQ=null;S.gJE=null;S.gView='home';render();document.getElementById('app').scrollTop=0;break;
     case 'gXShow':{const q=S.gQ;if(q&&!gXList(q).includes(v)){q.xt=[...(q.xt||[]),v];gXWatch([v]);render();}}break;
     case 'gXReq':gXReq(v);break;
+    case 'gRv':gRvToggle(v);break;
+    case 'gRvGo':gStart('rv',shuffle(gRvKeys()).slice(0,20),'要復習リスト');break;
     case 'gXWant':gXWant(v);break;
     case 'gZoom':S.gZoom=!S.gZoom;render();break;
     case 'gOrig':S.gOrig=!S.gOrig;render();break;

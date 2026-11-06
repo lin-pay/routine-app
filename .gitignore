@@ -6,3 +6,8 @@ node_modules/
 reports/
 screen_time_pin.md
 __pycache__/
+# 個人の文書・作業メモは公開リポジトリに載せない（2026-11-06。履歴からも消した）。docs/ はアプリの仕組みの説明 notifications.md だけ載せる
+docs/*
+!docs/notifications.md
+project_memory.md
+urls_log.md

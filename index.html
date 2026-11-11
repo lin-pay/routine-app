@@ -408,7 +408,7 @@ let S={user:null,authOk:false,dataOk:false,
   // settings / notifications
   settings:defSettings(),
   // 技術士: 過去問の索引・解いた記録・業務記録、ドリル中の状態、問題画像のキャッシュ
-  gIdx:null,gP:{q:{},days:{},tests:[]},gJ:[],gView:'home',gQ:null,gImg:{},gJE:null,gZoom:false,gOrig:false,gX:{},gXU:{},gRv:{},
+  gIdx:null,gP:{q:{},days:{},tests:[]},gJ:[],gView:'home',gQ:null,gImg:{},gJE:null,gZoom:false,gOrig:false,gX:{},gXU:{},gRv:{},gAv:{},
   // global
   tab:'routine',toast:null,cele:null,unsub:[]};
 let toastT,celeT;
@@ -436,6 +436,7 @@ function startSync(uid){
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','gprog'),s=>{const d=s.exists()?s.data():{};S.gP={q:d.q||{},days:d.days||{},tests:d.tests||[]};if(gFixMiss())saveG();render();}));
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','gjournal'),s=>{S.gJ=s.exists()?s.data().items||[]:[];render();}));
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','grev'),s=>{S.gRv=(s.exists()&&s.data().q)||{};render();}));
+  S.unsub.push(onSnapshot(doc(db,'users',uid,'data','gavoid'),s=>{S.gAv=(s.exists()&&s.data().q)||{};render();}));
 }
 async function saveR(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','tasks'),{items:S.tasks});}catch(e){}}
 async function saveC(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','completions'),{entries:S.comps});}catch(e){}}
@@ -445,8 +446,10 @@ async function saveG(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'dat
 async function saveJ(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','gjournal'),{items:S.gJ});}catch(e){console.error(e);}}
 // 要復習リストは gprog と別の文書にする（gprog は q・days・tests だけを読み書きする古い版のアプリに消されないように）
 async function saveGRv(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','grev'),{q:S.gRv});}catch(e){console.error(e);toast('保存できませんでした');}}
+// 「できれば選択したくない」もさらに別の文書にする（grev を q だけで書き戻す今までの版のアプリに消されないように）
+async function saveGAv(){if(S.user)try{await setDoc(doc(db,'users',S.user.uid,'data','gavoid'),{q:S.gAv});}catch(e){console.error(e);toast('保存できませんでした');}}
 
-onAuthStateChanged(auth,u=>{S.user=u;S.authOk=true;if(u)startSync(u.uid);else{S.dataOk=false;S.tasks=[];S.comps={};S.fit={workouts:{},runs:{},weight:{},meals:{}};S.settings=defSettings();S.gIdx=null;S.gP={q:{},days:{},tests:[]};S.gJ=[];S.gQ=null;S.gImg={};gXStop();S.gX={};S.gRv={};S.gView='home';render();}});
+onAuthStateChanged(auth,u=>{S.user=u;S.authOk=true;if(u)startSync(u.uid);else{S.dataOk=false;S.tasks=[];S.comps={};S.fit={workouts:{},runs:{},weight:{},meals:{}};S.settings=defSettings();S.gIdx=null;S.gP={q:{},days:{},tests:[]};S.gJ=[];S.gQ=null;S.gImg={};gXStop();S.gX={};S.gRv={};S.gAv={};S.gView='home';render();}});
 getRedirectResult(auth).catch(()=>{});
 async function login(){const p=new GoogleAuthProvider();try{await signInWithPopup(auth,p);}catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/popup-closed-by-user')await signInWithRedirect(auth,p);}}
 async function logout(){S.unsub.forEach(u=>u());S.unsub=[];await signOut(auth);}
@@ -879,6 +882,16 @@ function gRvToggle(k){
   }
   saveGRv();render();
 }
+// 「できれば選択したくない」（data/gavoid の q[k]）: 解説を読んで、本番では選ばずに済ませたいと思った問題に自分で付ける印。
+// あとで範囲を絞るときに使う印だけで、出題の予定・順番は変えない（それまでは全部普通に解く）。
+// 適性は本番で15問すべてを解答する（選べない）ので付けない
+function gAvOk(k){const f=gFind(k);return!!f&&f.s.s!=='tekisei';}
+function gAvToggle(k){
+  if(!S.user||!gAvOk(k))return;
+  if(S.gAv[k]){delete S.gAv[k];toast('「できれば選択したくない」を外しました');}
+  else{S.gAv[k]={at:Date.now()};toast('「できれば選択したくない」にチェックしました');}
+  saveGAv();render();
+}
 // 今日 G_GOAL 問に達したら、ルーティンの「技術士」（link:'gq'）に✓を付ける
 function gAutoTask(){
   const td=fmtD(new Date());if(((S.gP.days[td]||{}).n||0)<G_GOAL)return;
@@ -1200,7 +1213,10 @@ function renderGX(q,k){
   // 要復習リストに入れる・外す。入っていれば次に出る日（今日の10問）も出す
   const rv=S.gRv[k],p=S.gP.q[k],td=fmtD(new Date());
   const rvb=`<button class="psb gq-xw gx-rv${rv?' on':''}" data-a="gRv" data-v="${k}">${rv?'✓ 要復習リストに入っています（押すと外す）':'📌 要復習リストに入れる'}</button>${rv&&p&&p.due?`<div class="gq-xn">次の復習は ${p.due<=td?'今日':gMd(p.due,td)}（今日の10問）。ホームの「📌 要復習リスト」からも解けます</div>`:''}`;
-  return`<div class="tsr gx"><div class="tsh"><div class="tsn">${o?'○':'×'} ${esc(f.s.ys)} ${G_SUBJ[f.s.s]} ${f.q.no}</div><div class="tsv" style="font-size:11px">${pk?`あなた ${CIRC[pk-1]} ・ `:''}正答 ${gAnsStr(f.q)}</div></div><div style="margin-top:8px">${body}</div>${rvb}<div class="gq-foot" style="text-align:left;margin-top:8px;line-height:1.9"><a href="${f.s.pdf}#page=${f.q.p}" target="_blank" rel="noopener">原本PDF（日本技術士会）${f.q.p}ページ ↗</a>${gAnsUrl(f.s)?`<br><a href="${gAnsUrl(f.s)}" target="_blank" rel="noopener">正答の原本（日本技術士会）↗</a>`:''}</div></div>`;
+  // できれば選択したくない（範囲を絞るときに使う印。適性には出さない）
+  const av=S.gAv[k];
+  const avb=gAvOk(k)?`<button class="psb gq-xw gx-av${av?' on':''}" data-a="gAv" data-v="${k}">${av?'✓ できれば選択したくない（押すと外す）':'🙅 できれば選択したくない'}</button>${av?'<div class="gq-xn">範囲を絞るときに使う印です（出題は今までどおり）</div>':''}`:'';
+  return`<div class="tsr gx"><div class="tsh"><div class="tsn">${o?'○':'×'} ${esc(f.s.ys)} ${G_SUBJ[f.s.s]} ${f.q.no}</div><div class="tsv" style="font-size:11px">${pk?`あなた ${CIRC[pk-1]} ・ `:''}正答 ${gAnsStr(f.q)}</div></div><div style="margin-top:8px">${body}</div>${rvb}${avb}<div class="gq-foot" style="text-align:left;margin-top:8px;line-height:1.9"><a href="${f.s.pdf}#page=${f.q.p}" target="_blank" rel="noopener">原本PDF（日本技術士会）${f.q.p}ページ ↗</a>${gAnsUrl(f.s)?`<br><a href="${gAnsUrl(f.s)}" target="_blank" rel="noopener">正答の原本（日本技術士会）↗</a>`:''}</div></div>`;
 }
 // 森林・林業白書: 年度ごとに概要・全文・検索・PDF と、全文（HTML 版）の章へのリンク。どれも林野庁のサイトを開く
 function renderGWP(){
@@ -1572,6 +1588,7 @@ function handleA(e){
     case 'gXShow':{const q=S.gQ;if(q&&!gXList(q).includes(v)){q.xt=[...(q.xt||[]),v];gXWatch([v]);render();}}break;
     case 'gXReq':gXReq(v);break;
     case 'gRv':gRvToggle(v);break;
+    case 'gAv':gAvToggle(v);break;
     case 'gRvGo':gStart('rv',shuffle(gRvKeys()).slice(0,20),'要復習リスト');break;
     case 'gXWant':gXWant(v);break;
     case 'gZoom':S.gZoom=!S.gZoom;render();break;

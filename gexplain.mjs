@@ -1,9 +1,12 @@
 /**
  * 技術士の過去問の解説を Claude で作る常駐スクリプト（Mac の LaunchAgent com.routine-app.gexplain で動かす）
  *
- *   - users/{uid}/data/gprog を見張り、間違えたことのある問題（r に x がある）で解説がまだないものを、1問ずつ作る
- *   - アプリで頼まれた問題（users/{uid}/data/gxreq の q[k] = 頼んだ時刻）も作る（正解した問題・作り直し）。頼むのは、答えたあとの
- *     「解説を見る」（まだ解説が無いか作れなかった問題だけ）と、結果画面の「解説を頼む」「もう一度頼む」
+ *   - すべての問題の解説を1問ずつ作る（2026-11-15 から。それまでは間違えたことのある問題と頼まれた問題だけ）。作る順番は
+ *     1) アプリで頼まれた問題（users/{uid}/data/gxreq の q[k] = 頼んだ時刻。新しいものから。作り直しも）。頼むのは、答えたあとの
+ *        「解説を見る」（まだ解説が無いか作れなかった問題だけ）と、結果画面の「解説を頼む」「もう一度頼む」
+ *     2) 解いたことのある問題（users/{uid}/data/gprog を見張る。×も○も、最後に解いた日の新しいものから）
+ *     3) まだ解いていない問題（索引の順＝新しい年度から）。先に作っておく分なので、BF_GAP ごとに1問、24時間で DAY_CAP − KEEP 問まで
+ *   - できた解説は作り直さない（頼まれたときだけ）。作れなかった問題（'err'）も、頼まれるまでそのまま
  *   - 問題の画像（users/{uid}/gq/{k}）と公式の正答（data/gq_idx）を claude -p に渡す。Claude Code の既定のシステム
  *     プロンプトとツールは使わない（--system-prompt・--tools ""）ので、1問 約3千トークンの入力で済む
  *   - 結果は users/{uid}/gx/{k} = { s:'run'|'ok'|'err', text, at, model, cost, ms }。アプリはこれを表示する
@@ -28,7 +31,10 @@ const statePath = join(__dirname, 'reports', 'gexplain_state.json');   // 24時�
 const CLAUDE = '/Users/nagaoka/.local/bin/claude';
 const MODEL = 'claude-opus-5-5';
 const EFFORT = 'medium';
-const DAY_CAP = 100;          // 24時間に作る上限（費用の歯止め。1問 約$0.04）
+const DAY_CAP = 200;          // 24時間に作る上限（費用の歯止め。1問 約$0.03〜0.04）
+const KEEP = 50;              // まだ解いていない問題を先に作るのは 24時間で DAY_CAP − KEEP 問まで（残りは解いた問題・頼まれた問題のためにあけておく）
+const BF_GAP = 3 * 60e3;      // まだ解いていない問題を先に作るときの間隔（続けて動かして、Claude の利用枠を一度に使わないように）
+const BF_PAUSE = 60 * 60e3;   // まだ解いていない問題で失敗したら、先に作るのを1時間休む（Claude が使えないあいだに、続けて「作れなかった」にしないように）
 const RESCAN = 10 * 60e3;     // 見張りが止まっていても拾えるよう、10分ごとに読み直す
 const TIMEOUT = 5 * 60e3;     // 1問にかける時間の上限
 const STALE = 15 * 60e3;      // 'run' のまま残った解説（途中で止まった）を作り直すまでの時間
@@ -58,8 +64,12 @@ const SYSTEM = `あなたは技術士第一次試験の受験指導の講師で�
 - 全体で800字程度まで。`;
 
 let uid = null, map = {}, prog = null, req = {}, busy = false;
+let lastBf = 0, bfTimer = null, bfPause = 0, said = '';   // まだ解いていない問題を最後に作り始めた時刻・次に起きるタイマー・休む終わりの時刻・最後に出した「待つ」のお知らせ
+const bfSkip = new Set();     // まだ解いていない問題で失敗したもの（この起動のあいだは飛ばす。解いたときは、すぐ作る側でもう一度作る）
 const gx = {};                // k → { s, at }（解説の状態だけ。本文は読まない）
 const ready = { idx: false, prog: false, req: false, gx: false };
+// 「上限に達したので待つ」は、見張りが動くたびに出さず、変わったときだけログに出す
+const note = m => { if (m !== said) { said = m; if (m) log(m); } };
 
 function loadState() { try { return JSON.parse(readFileSync(statePath, 'utf8')); } catch (e) { return { done: [] }; } }
 function recent() { const st = loadState(), now = Date.now(); return st.done.filter(t => now - t < 864e5); }
@@ -67,18 +77,23 @@ function markDone() { const d = [...recent(), Date.now()]; mkdirSync(dirname(sta
 
 function indexMap(idx) { const m = {}; (idx?.sets || []).forEach(s => s.qs.forEach(q => { m[q.k] = { s, q }; })); return m; }
 
-// 作る問題: 頼まれたもの（新しいものから）→ 間違えたことのあるもの（答えた順）
+// 作る問題を2つに分けて返す
+//   now:   頼まれたもの（新しいものから）→ 解いたことのある問題（×も○も。最後に解いた日の新しいものから）。すぐ作る
+//   later: まだ解いていない問題（索引の順＝新しい年度から）。先に作っておく分で、間をあけて少しずつ作る
 function wanted() {
   const now = Date.now(), need = k => {
-    if (!map[k]) return false;
+    const m = map[k];
+    if (!m || !(Array.isArray(m.q.a) ? m.q.a.length : m.q.a > 0)) return false;   // 不成立の問題（正答 0）は出題しないので作らない
     const g = gx[k];
     if (!g) return true;
     if (g.s === 'run') return now - (g.at || 0) > STALE;
     return !!req[k] && req[k] > (g.at || 0);   // 作ったあと（失敗したあと）にもう一度頼まれた
   };
+  const Q = prog?.q || {};
   const asked = Object.keys(req).sort((a, b) => req[b] - req[a]);
-  const wrong = Object.entries(prog?.q || {}).filter(([, p]) => (p.r || '').includes('x')).map(([k]) => k);
-  return [...new Set([...asked, ...wrong])].filter(need);
+  const seen = Object.keys(Q).sort((a, b) => (Q[b].l || '').localeCompare(Q[a].l || ''));
+  const first = [...new Set([...asked, ...seen])].filter(need), f = new Set(first);
+  return { now: first, later: Object.keys(map).filter(k => !f.has(k) && !bfSkip.has(k) && need(k)) };
 }
 
 function claude(input) {
@@ -120,9 +135,18 @@ async function pump() {
   busy = true;
   try {
     for (;;) {
-      const k = wanted()[0];
-      if (!k) break;
-      if (recent().length >= DAY_CAP) { log(`24時間の上限 ${DAY_CAP}問に達したので待つ（残り ${wanted().length}問）`); break; }
+      const w = wanted(), later = !w.now.length, k = later ? w.later[0] : w.now[0];
+      if (!k) { note(''); break; }
+      const n = recent().length;
+      if (n >= DAY_CAP) { note(`24時間の上限 ${DAY_CAP}問に達したので待つ（残り ${w.now.length + w.later.length}問）`); break; }
+      if (later) {
+        if (ONCE) break;
+        if (n >= DAY_CAP - KEEP) { note(`まだ解いていない問題は24時間で ${DAY_CAP - KEEP}問まで作ったので待つ（残り ${w.later.length}問）`); break; }
+        const wait = Math.max(lastBf + BF_GAP, bfPause) - Date.now();
+        if (wait > 0) { if (!bfTimer) bfTimer = setTimeout(() => { bfTimer = null; tick(); }, wait + 50); break; }
+        lastBf = Date.now();
+      }
+      note('');
       const ref = db.doc(`users/${uid}/gx/${k}`), t0 = Date.now();
       gx[k] = { s: 'run', at: t0 };
       await ref.set({ s: 'run', at: t0 });
@@ -135,7 +159,12 @@ async function pump() {
         gx[k] = { s: 'ok', at };
         await ref.set({ s: 'ok', text: res.text, at, model: MODEL, cost: res.cost, ms: res.ms });
         markDone();
-        log(`${k}: 作成 ${Math.round(res.ms / 1000)}秒 $${res.cost.toFixed(4)} ${res.text.length}字`);
+        log(`${k}: 作成${later ? '（まだ解いていない問題）' : ''} ${Math.round(res.ms / 1000)}秒 $${res.cost.toFixed(4)} ${res.text.length}字`);
+      } else if (later) {
+        // まだ解いていない問題は「作れなかった」にせず、作る前に戻して飛ばす（解いたときに、すぐ作る側でもう一度作る）
+        delete gx[k]; bfSkip.add(k); bfPause = Date.now() + BF_PAUSE;
+        await ref.delete();
+        log(`${k}: まだ解いていない問題を作れなかったので飛ばし、先に作るのを${BF_PAUSE / 60e3}分休む`);
       } else {
         gx[k] = { s: 'err', at };
         await ref.set({ s: 'err', at, msg: String(last && last.message || '').slice(0, 300) });
@@ -148,7 +177,13 @@ async function pump() {
 // 4つの見張りの最初の読み込みがそろってから動く
 function tick() {
   if (!Object.values(ready).every(Boolean)) return;
-  if (DRY) { console.log(wanted().join('\n') || '(作る問題なし)'); process.exit(0); }
+  if (DRY) {
+    const w = wanted();
+    console.log(`すぐ作る ${w.now.length}問: ${w.now.join(' ') || '(なし)'}`);
+    console.log(`まだ解いていない問題 ${w.later.length}問: ${w.later.slice(0, 20).join(' ')}${w.later.length > 20 ? ' …' : ''}`);
+    console.log(`24時間に作った数 ${recent().length}（上限 ${DAY_CAP}、まだ解いていない問題は ${DAY_CAP - KEEP} まで）`);
+    process.exit(0);
+  }
   pump();
 }
 

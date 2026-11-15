@@ -719,19 +719,25 @@ function gKeysOf(s){return s.qs.filter(gOk).map(q=>q.k);}
 function gAll(){return gSets().flatMap(gKeysOf);}
 function gDays(ds){return Math.round((parseD(ds)-parseD(fmtD(new Date())))/864e5);}
 function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-// 期日が来た復習。前回間違えた問題と要復習リストの問題を先に、あとは期日の古い順（復習がたまっても、間違えた問題が後回しにならないように）
-function gDue(){const td=fmtD(new Date()),Q=S.gP.q,x=k=>Q[k].r.slice(-1)==='x'||S.gRv[k]?0:1;return gAll().filter(k=>Q[k]&&Q[k].due<=td).sort((a,b)=>x(a)-x(b)||(Q[a].due<Q[b].due?-1:Q[a].due>Q[b].due?1:0));}
+function gByDue(a,b){const Q=S.gP.q;return Q[a].due<Q[b].due?-1:Q[a].due>Q[b].due?1:0;}
+// 要復習リストの問題のうち、最後に解いたときに正解したもの。今日の10問では、まだ解いていない問題のあとに回す（ふだんはホームの「📌 要復習リスト」から解く）
+function gRvLow(k){const p=S.gP.q[k];return!!(S.gRv[k]&&p&&p.r.slice(-1)==='o');}
+// 期日が来た復習。前回間違えた問題を先に（要復習リストの問題も、前回間違えていればここ）、あとは期日の古い順（復習がたまっても、間違えた問題が後回しにならないように）。
+// 要復習リストの○の問題（gRvLow）は入れない
+function gDue(){const td=fmtD(new Date()),Q=S.gP.q,x=k=>Q[k].r.slice(-1)==='x'?0:1;return gAll().filter(k=>Q[k]&&Q[k].due<=td&&!gRvLow(k)).sort((a,b)=>x(a)-x(b)||gByDue(a,b));}
 function gWeak(){const Q=S.gP.q;return gAll().filter(k=>Q[k]&&Q[k].r.slice(-1)==='x');}
 function gRvKeys(){return gAll().filter(k=>S.gRv[k]);}
-// 今日の10問: 復習の期日が来た問題を先に、残りは新しい問題を 森林5:基礎3:適性2 で混ぜる
+// 今日の10問: 復習の期日が来た問題を先に、残りは新しい問題を 森林5:基礎3:適性2 で混ぜる。
+// 要復習リストの○の問題は、期日が来ていても新しい問題のあと（まだ解いていない問題が足りないときだけ出る）
 function gDailyKeys(){
-  const due=gDue().slice(0,G_GOAL),need=G_GOAL-due.length;
+  const td=fmtD(new Date()),due=gDue().slice(0,G_GOAL),need=G_GOAL-due.length;
   if(need<=0)return due;
   const fr={shinrin:[],kiso:[],tekisei:[]};
   shuffle(gAll().filter(k=>!S.gP.q[k])).forEach(k=>{const f=gFind(k);if(f&&fr[f.s.s])fr[f.s.s].push(k);});
   const order=['shinrin','kiso','shinrin','tekisei','shinrin','kiso','shinrin','tekisei','shinrin','kiso'],pick=[];
   for(let i=0;pick.length<need&&i<need*order.length;i++){const l=fr[order[i%order.length]];if(l.length)pick.push(l.shift());}
-  return[...due,...pick];
+  const low=gAll().filter(k=>gRvLow(k)&&S.gP.q[k].due<=td).sort(gByDue);
+  return[...due,...pick,...low.slice(0,need-pick.length)];
 }
 function gAddD(ds,n){const d=parseD(ds);d.setDate(d.getDate()+n);return fmtD(d);}
 // 記録したら true。同じ日にもう一度解いた分（間違えた問題をもう一度・通しや苦手で重なったもの）は、答えを覚えているので記録しない（予定も履歴も今日の問題数も変えない）
@@ -864,7 +870,8 @@ async function gXWant(k){
   }catch(e){q.asked[k]=0;}
 }
 // 要復習リスト（data/grev の q[k]）: 解説を読んで、まだ分かっていないと思った問題を自分で入れる。外すまで残る。
-// 入れると間違えた問題と同じ扱いで、1週間後（期日がそれより早ければそのまま）の今日の10問に出し、期日が来た復習の中でも先に出す。
+// 入れると、期日を1週間後に早める（期日がそれより早ければそのまま。間違えた問題はもともと1週間後）。今日の10問では、前回間違えた問題は期日が来た復習の先頭に出し、
+// 前回正解した問題はまだ解いていない問題のあとに回す（gRvLow）。
 // 入れる前の予定（b・due）と最後に解いた日（l）を残しておき、そのあと解かないうちに外したら予定を元に戻す
 function gRvToggle(k){
   if(!S.user||!gFind(k))return;
@@ -1210,9 +1217,10 @@ function renderGX(q,k){
     :x&&x.s==='err'&&!q.asked[k]?'<div class="swd">解説を作れませんでした。</div><button class="psb" data-a="gXReq" data-v="'+k+'" style="margin-top:8px">もう一度頼む</button>'
     :o&&!q.asked[k]?'<button class="psb" data-a="gXReq" data-v="'+k+'">解説を頼む</button>'
     :'<div class="swd">解説を待っています（Mac で1問ずつ作ります。1問15秒ほど）</div>';
-  // 要復習リストに入れる・外す。入っていれば次に出る日（今日の10問）も出す
+  // 要復習リストに入れる・外す。入っていれば、今日の10問でいつ出るかも出す（前回○の問題は、まだ解いていない問題のあと）
   const rv=S.gRv[k],p=S.gP.q[k],td=fmtD(new Date());
-  const rvb=`<button class="psb gq-xw gx-rv${rv?' on':''}" data-a="gRv" data-v="${k}">${rv?'✓ 要復習リストに入っています（押すと外す）':'📌 要復習リストに入れる'}</button>${rv&&p&&p.due?`<div class="gq-xn">次の復習は ${p.due<=td?'今日':gMd(p.due,td)}（今日の10問）。ホームの「📌 要復習リスト」からも解けます</div>`:''}`;
+  const rvn=!rv||!p||!p.due?'':gRvLow(k)?'今日の10問では、まだ解いていない問題のあとに出します（ホームの「📌 要復習リスト」から解けます）':`次の復習は ${p.due<=td?'今日':gMd(p.due,td)}（今日の10問）。ホームの「📌 要復習リスト」からも解けます`;
+  const rvb=`<button class="psb gq-xw gx-rv${rv?' on':''}" data-a="gRv" data-v="${k}">${rv?'✓ 要復習リストに入っています（押すと外す）':'📌 要復習リストに入れる'}</button>${rvn?`<div class="gq-xn">${rvn}</div>`:''}`;
   // できれば選択したくない（範囲を絞るときに使う印。適性には出さない）
   const av=S.gAv[k];
   const avb=gAvOk(k)?`<button class="psb gq-xw gx-av${av?' on':''}" data-a="gAv" data-v="${k}">${av?'✓ できれば選択したくない（押すと外す）':'🙅 できれば選択したくない'}</button>${av?'<div class="gq-xn">範囲を絞るときに使う印です（出題は今までどおり）</div>':''}`:'';

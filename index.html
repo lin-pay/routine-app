@@ -334,6 +334,10 @@ button.gq-ri{font-family:var(--font);cursor:pointer}
 .gq-ms.past{opacity:.4}
 .gj-ta{min-height:84px;resize:vertical;line-height:1.6;font-size:14px;display:block}
 .gj-item{cursor:pointer}
+.gj-step{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-size:11px;line-height:1.5;margin-top:4px}
+.gj-go{font-size:11px;font-weight:700;color:var(--accent);background:var(--aglow);border:none;border-radius:6px;padding:3px 9px;cursor:pointer;font-family:inherit}
+.gj-here{margin-left:8px;font-size:10px;letter-spacing:0;text-transform:none;color:var(--accent);background:var(--aglow);padding:1px 6px;border-radius:4px}
+.pbtn.gj-today{text-align:left;line-height:1.5}
 .gj-item:active{background:var(--sh)}
 </style>
 </head>
@@ -387,7 +391,9 @@ const G_GRP=['設計・計画','情報・論理','解析','材料・化学・バ
 const G_GAP=600000;              // 通しの経過時間: 操作と操作の間は最大10分まで数える（画面を開いたまま離れたとき）
 const G_RUN='g_run';             // 途中の通しを端末（localStorage）に残し、中断や再読み込みのあと「続きから」再開する
 const G_TAGS=['専門的学識','問題解決','マネジメント','評価','コミュニケーション','リーダーシップ','技術者倫理','継続研さん'];
-const GJ_F=[['title','タイトル','例: 低肥料試験区の設計と評価',0],['when','時期','例: 2024年3月〜2025年2月',0],['role','立場と役割','例: 試験の設計と取りまとめ。現地スタッフ3人に指示',1],['issue','課題（何が問題だったか）','',1],['choice','比べた選択肢と、それを選んだ理由','',1],['result','結果（数字）と、残ったもの','',1]];
+const GJ_F=[['title','タイトル','例: 低肥料試験区の設計と評価',0],['when','時期','例: 2024年3月〜2025年2月',0],['role','立場と役割','例: 試験の設計と取りまとめ。現地スタッフ3人に指示',1],['issue','課題（何が問題だったか）','例: 施肥の費用が高いのに、減らしてよいかの根拠がなかった（数字があれば）',1],['choice','比べた選択肢と、それを選んだ理由','例: 施肥量を3通りにした試験区で比べた。いきなり全体で減らす案は、成長が落ちたときの損が大きいので外した',1],['result','結果（数字）と、残ったもの','例: 2割減らしても成長は同じ。費用は年○%減り、社内の基準になった',1]];
+// 業務記録は1日1項目ずつ埋める（2026-11-18。週1回だと今日なにをするか分からず先延ばしになる、とユーザー）。この4つがそろえば1件できあがり。720字のまとめは「あとでよい」ので入れない
+const GJ_STEP=[['role','立場と役割','だれと組み、何を任されていたか'],['issue','課題','何が問題だったか。数字があれば'],['choice','比べた選択肢と理由','どの案を比べ、なぜそれを選んだか'],['result','結果（数字）','結果の数字と、残ったもの。コンピテンシーも選ぶ']];
 const CIRC='①②③④⑤';
 // 一次試験の正答（日本技術士会。番号の一覧だけで、解説はない）。年度ごとの PDF の番号と、科目のページ（どの年度も同じ）
 const G_ANS={R7:4,R6:5,R5:6,R4:7,R3:8,R2:9,R1b:10,R1:11},G_ANSP={kiso:1,tekisei:2,shinrin:15};
@@ -408,7 +414,7 @@ let S={user:null,authOk:false,dataOk:false,
   // settings / notifications
   settings:defSettings(),
   // 技術士: 過去問の索引・解いた記録・業務記録、ドリル中の状態、問題画像のキャッシュ
-  gIdx:null,gP:{q:{},days:{},tests:[]},gJ:[],gView:'home',gQ:null,gImg:{},gJE:null,gZoom:false,gOrig:false,gX:{},gXU:{},gRv:{},gAv:{},
+  gIdx:null,gP:{q:{},days:{},tests:[]},gJ:[],gView:'home',gQ:null,gImg:{},gJE:null,gJFocus:null,gZoom:false,gOrig:false,gX:{},gXU:{},gRv:{},gAv:{},
   // global
   tab:'routine',toast:null,cele:null,unsub:[]};
 let toastT,celeT;
@@ -908,11 +914,32 @@ function gAutoTask(){
   const sk=getStreak(t);
   celebrate('📘',`今日の${G_GOAL}問 達成！`,sk>1?`${t.icon} ${t.name} ${sk}日連続`:`ルーティン「${t.name}」に✓を付けました`);
 }
-// 業務記録を保存したら、週1回のルーティン（link:'gj'）に今週分の✓を付ける（やる曜日の範囲外の日は付けない）
-function gjAutoTask(){
-  const t=S.tasks.find(x=>x.link==='gj'&&isWk(x)),td=fmtD(new Date());
-  if(!t||!wkOn(t,td)||wkDoneDay(t,td))return;
-  S.comps[`${td}:${t.id}`]=Date.now();saveC();
+// 業務記録を保存したら、ルーティン（link:'gj'）に✓を付ける。毎日のタスク（2026-11-18〜、平日）は、その日に1項目でも進んだとき（新しく書いた・空いていた項目を埋めた）だけ。
+// 週1回のタスク（前の形）なら今週分（やる曜日の範囲外の日は付けない）
+function gjAutoTask(progress){
+  const t=S.tasks.find(x=>x.link==='gj'),td=fmtD(new Date());if(!t)return;
+  if(isWk(t)){if(wkOn(t,td)&&!wkDoneDay(t,td)){S.comps[`${td}:${t.id}`]=Date.now();saveC();}return;}
+  const k=`${td}:${t.id}`;if(!progress||!t.days.includes(tdi())||S.comps[k])return;
+  S.comps[k]=Date.now();saveC();
+  const sk=getStreak(t);
+  celebrate('📝','今日の業務記録 達成！',sk>1?`${t.icon} ${t.name} ${sk}日連続`:`ルーティン「${t.name}」に✓を付けました`);
+}
+// 今日の1歩: 書きかけの記録のうち、いちばん進んでいるもの（同じなら最後に触ったもの）の、まだ空いている最初の項目。書きかけが無ければ新しい題材
+function gjFill(j){return GJ_STEP.filter(([k])=>(j[k]||'').trim()).length;}
+function gjStep(){
+  const j=S.gJ.filter(x=>gjFill(x)<GJ_STEP.length).sort((a,b)=>gjFill(b)-gjFill(a)||(b.updated||0)-(a.updated||0))[0];
+  if(!j)return{j:null,f:'title',l:'新しい題材',h:'業務を1つ選び、タイトルと時期を書く'};
+  const [f,l,h]=GJ_STEP.find(([k])=>!(j[k]||'').trim());return{j,f,l,h};
+}
+function gjStepText(s){return s.j?`「${s.j.title}」の${s.l}を書く`:'新しい題材を1つ選び、タイトルと時期を書く';}
+// ルーティンの行の下に出す今日の1歩（済んでいれば次の1歩）。「書く」でその欄を開く
+function gjRow(done){return`<div class="td gj-step">${done?'✓ 今日の分は済み · 次: ':'今日: '}${esc(gjStepText(gjStep()))}<button class="gj-go" data-a="gjGo">${done?'開く':'書く'} →</button></div>`;}
+// 今日の1歩の欄を開く（その記録を開き、その欄にカーソルを置く）
+function gjOpen(){
+  const s=gjStep();
+  S.gJE=s.j?JSON.parse(JSON.stringify(s.j)):{title:'',when:'',role:'',issue:'',choice:'',result:'',tags:[],sum:''};if(!S.gJE.tags)S.gJE.tags=[];
+  S.gJFocus=s.f;S.tab='study';S.gView='jform';S.pop=null;render();
+  const e=document.querySelector(`[data-f="${s.f}"]`);if(e){e.focus({preventScroll:true});e.scrollIntoView({block:'center'});}
 }
 function gjLen(s){return[...(s||'')].filter(c=>c!=='\n').length;}
 // 通しの時計は画面に出ている間だけ進める。表示は15秒ごとに時計の文字だけ書き換える（問題の画像は描き直さない）
@@ -963,7 +990,7 @@ function renderRHome(){
     <div class="dn"><button class="dnb" data-a="rPrev">◀</button><div class="dnc"><div class="dnd">${rDateLabel()}${today?'<span class="today-badge">TODAY</span>':''}</div></div>${today?'':'<button class="dnb" data-a="rNext">▶</button>'}<button class="dnb" data-a="rToday" title="今日" style="${today?'opacity:.3;pointer-events:none':''}">●</button></div>
     <div class="pw"><div class="rc"><svg viewBox="0 0 104 104"><defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#E8A842"/><stop offset="100%" stop-color="#D4793A"/></linearGradient></defs><circle cx="52" cy="52" r="46" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/><circle cx="52" cy="52" r="46" fill="none" stroke="url(#rg)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(p/100)*c} ${c}" transform="rotate(-90 52 52)" style="transition:stroke-dasharray .7s cubic-bezier(.4,0,.2,1)"/></svg><div class="rt"><div class="rp">${p}%</div><div class="rs">${done}/${tasks.length}</div></div></div></div>
     ${today&&tasks.length?renderMomentum():''}
-    ${tasks.length===0&&!wk.length?`<div class="empty"><div class="ei">${today?'🌱':'📭'}</div><div class="et">${today?'ルーティンを始めましょう':'この日のタスクはありません'}</div><div class="ed">${today?'＋ボタンからタスクを追加':''}</div></div>`:!tasks.length?'':`<div class="tl">${sorted.map((t,i)=>{const d=isComp(t.id),sk=today?getStreak(t):0,co=isCarryover(t.id);return`<div class="tc ${d?'done':''}" style="animation-delay:${i*.04}s;${S.pop===t.id?'z-index:20':''}"><button class="cb ${d?'ck':''}" data-a="toggle" data-id="${t.id}">${d?'✓':''}</button><div class="tb" data-a="toggle" data-id="${t.id}"><div class="tn">${t.icon} ${esc(t.name)}${co?' <span style="font-size:10px;color:var(--accent);font-weight:700;background:var(--aglow);padding:1px 6px;border-radius:4px">昨日</span>':''}</div>${sk>0?`<div class="st${!d&&sk>=7?' risk':''}">${!d&&sk>=7?'⚠️':'🔥'} ${sk}日連続${d?'':` → 今日で${sk+1}日目`}</div>`:''}${metaLine(t,co)}</div>${today?popMenu(t):''}</div>`;}).join('')}</div>`}
+    ${tasks.length===0&&!wk.length?`<div class="empty"><div class="ei">${today?'🌱':'📭'}</div><div class="et">${today?'ルーティンを始めましょう':'この日のタスクはありません'}</div><div class="ed">${today?'＋ボタンからタスクを追加':''}</div></div>`:!tasks.length?'':`<div class="tl">${sorted.map((t,i)=>{const d=isComp(t.id),sk=today?getStreak(t):0,co=isCarryover(t.id);return`<div class="tc ${d?'done':''}" style="animation-delay:${i*.04}s;${S.pop===t.id?'z-index:20':''}"><button class="cb ${d?'ck':''}" data-a="toggle" data-id="${t.id}">${d?'✓':''}</button><div class="tb" data-a="toggle" data-id="${t.id}"><div class="tn">${t.icon} ${esc(t.name)}${co?' <span style="font-size:10px;color:var(--accent);font-weight:700;background:var(--aglow);padding:1px 6px;border-radius:4px">昨日</span>':''}</div>${sk>0?`<div class="st${!d&&sk>=7?' risk':''}">${!d&&sk>=7?'⚠️':'🔥'} ${sk}日連続${d?'':` → 今日で${sk+1}日目`}</div>`:''}${metaLine(t,co)}${t.link==='gj'&&today?gjRow(d):''}</div>${today?popMenu(t):''}</div>`;}).join('')}</div>`}
     ${wk.length?renderWkList(wk,today):''}
   </div>${today?'<button class="fab" data-a="add">＋</button>':''}${S.pop?'<div class="bd" data-a="closepop"></div>':''}`;
 }
@@ -1168,9 +1195,11 @@ function renderGGrid(){
   }).join('')}`).join('')}</div>`;
 }
 function renderGJSummary(){
-  const ws=wkStart(fmtD(new Date())).getTime(),wk=S.gJ.some(j=>(j.updated||0)>=ws);
-  return`<div class="tsr gj-item" data-a="gJList"><div class="tsh"><div class="tsn">📝 業務記録 ${S.gJ.length}件</div><div class="tsv" style="font-size:12px">${wk?'今週 ✓':'今週まだ'}</div></div><div class="tsm"><span>課題 → 比べた選択肢と判断 → 結果（数字）</span></div></div>
-    <button class="pbtn" data-a="gJNew">＋ 業務記録を書く</button>`;
+  const t=S.tasks.find(x=>x.link==='gj'),td=fmtD(new Date()),w=t&&isWk(t),full=S.gJ.filter(j=>gjFill(j)===GJ_STEP.length).length;
+  const dn=t&&(w?wkDoneDay(t,td):S.comps[`${td}:${t.id}`]);
+  return`<div class="tsr gj-item" data-a="gJList"><div class="tsh"><div class="tsn">📝 業務記録 ${S.gJ.length}件${S.gJ.length?`（4項目そろった ${full}件）`:''}</div><div class="tsv" style="font-size:12px">${t?`${w?'今週':'今日'}${dn?' ✓':'まだ'}`:''}</div></div><div class="tsm"><span>立場と役割 → 課題 → 比べた選択肢と理由 → 結果（数字）を1日1つ</span></div></div>
+    <button class="pbtn gj-today" data-a="gjGo">今日の1歩: ${esc(gjStepText(gjStep()))}</button>
+    <button class="pbtn" data-a="gJNew">＋ 新しい業務を書く</button>`;
 }
 function renderGQuiz(){
   const q=S.gQ,k=q.keys[q.i],f=gFind(k),im=S.gImg[k],pk=q.pick[k],P=S.gP.q[k];
@@ -1246,9 +1275,10 @@ function renderGJList(){
     <div class="fa"><button class="bc" data-a="gHome" style="flex:1">← 戻る</button></div></div>`;
 }
 function renderGJForm(){
-  const e=S.gJE,n=gjLen(e.sum);
+  const e=S.gJE,n=gjLen(e.sum),fs=S.gJFocus,st=fs==='title'?['title','新しい題材','業務を1つ選び、タイトルと時期を書く']:GJ_STEP.find(([k])=>k===fs);
   return`<div class="app-inner fv"><div class="stl">${e.id?'業務記録を編集':'業務記録を書く'}</div>
-    ${GJ_F.map(([f,l,ph,ml])=>`<div class="ig"><label class="il">${l}</label>${ml?`<textarea class="ti gj-ta" data-a="gjf" data-f="${f}" placeholder="${escA(ph)}">${esc(e[f]||'')}</textarea>`:`<input class="ti" data-a="gjf" data-f="${f}" value="${escA(e[f]||'')}" placeholder="${escA(ph)}">`}</div>`).join('')}
+    ${st?`<div class="note" style="margin:-8px 0 14px">今日の1歩: <b>${st[1]}</b>（${st[2]}）。ここを書いて保存すれば、今日の分は終わり</div>`:''}
+    ${GJ_F.map(([f,l,ph,ml])=>`<div class="ig"><label class="il">${l}${f===fs?'<span class="gj-here">今日はここ</span>':''}</label>${ml?`<textarea class="ti gj-ta" data-a="gjf" data-f="${f}" placeholder="${escA(ph)}">${esc(e[f]||'')}</textarea>`:`<input class="ti" data-a="gjf" data-f="${f}" value="${escA(e[f]||'')}" placeholder="${escA(ph)}">`}</div>`).join('')}
     <div class="ig"><label class="il">関係するコンピテンシー</label><div class="icg">${G_TAGS.map(t=>`<button class="psb ${e.tags.includes(t)?'ac':''}" data-a="gjTag" data-v="${t}">${t}</button>`).join('')}</div></div>
     <div class="ig"><label class="il">720字のまとめ（あとでよい）</label><textarea class="ti gj-ta" style="min-height:170px" data-a="gjf" data-f="sum" placeholder="目的 → 立場と役割 → 技術的内容及び課題 → 技術的成果">${esc(e.sum||'')}</textarea><div class="swd" id="gjCnt" style="text-align:right;margin-top:6px;${n>720?'color:var(--danger)':''}">${n} / 720字</div></div>
     <div class="fa"><button class="bc" data-a="gjCancel">キャンセル</button><button class="bs" data-a="gjSave">保存する</button></div>
@@ -1604,20 +1634,21 @@ function handleA(e){
     case 'gRetryImg':{const k=S.gQ&&S.gQ.keys[S.gQ.i];if(k){delete S.gImg[k];gLoadImg(k);render();}}break;
     case 'gJList':S.gView='jlist';render();document.getElementById('app').scrollTop=0;break;
     case 'gWP':S.gView='wp';render();document.getElementById('app').scrollTop=0;break;
-    case 'gJNew':S.gJE={title:'',when:'',role:'',issue:'',choice:'',result:'',tags:[],sum:''};S.gView='jform';render();document.getElementById('app').scrollTop=0;break;
-    case 'gJEdit':{const j=S.gJ.find(x=>x.id===id);if(j){S.gJE=JSON.parse(JSON.stringify(j));if(!S.gJE.tags)S.gJE.tags=[];S.gView='jform';render();document.getElementById('app').scrollTop=0;}}break;
+    case 'gJNew':S.gJE={title:'',when:'',role:'',issue:'',choice:'',result:'',tags:[],sum:''};S.gJFocus=null;S.gView='jform';render();document.getElementById('app').scrollTop=0;break;
+    case 'gJEdit':{const j=S.gJ.find(x=>x.id===id);if(j){const s=gjStep();S.gJE=JSON.parse(JSON.stringify(j));if(!S.gJE.tags)S.gJE.tags=[];S.gJFocus=s.j&&s.j.id===j.id?s.f:null;S.gView='jform';render();document.getElementById('app').scrollTop=0;}}break;
+    case 'gjGo':e.stopPropagation();gjOpen();break;
     case 'gjf':if(S.gJE)S.gJE[el.dataset.f]=el.value;break;
     case 'gjTag':{const t=S.gJE.tags,i=t.indexOf(v);if(i>=0)t.splice(i,1);else t.push(v);render();}break;
-    case 'gjCancel':S.gJE=null;S.gView=S.gJ.length?'jlist':'home';render();break;
+    case 'gjCancel':S.gJE=null;S.gJFocus=null;S.gView=S.gJ.length?'jlist':'home';render();break;
     case 'gjSave':{
       const e=S.gJE;if(!e)break;
       if(!(e.title||'').trim()){toast('タイトルを入れてください');break;}
       const rec={id:e.id||'j_'+Date.now(),title:e.title.trim(),when:e.when||'',role:e.role||'',issue:e.issue||'',choice:e.choice||'',result:e.result||'',tags:e.tags||[],sum:e.sum||'',created:e.created||Date.now(),updated:Date.now()};
-      const i=S.gJ.findIndex(x=>x.id===rec.id);
+      const i=S.gJ.findIndex(x=>x.id===rec.id),pf=i>=0?gjFill(S.gJ[i]):-1;
       if(i>=0)S.gJ[i]=rec;else S.gJ=[rec,...S.gJ];
-      saveJ();gjAutoTask();S.gJE=null;S.gView='jlist';toast('保存しました');
+      saveJ();S.gJE=null;S.gJFocus=null;S.gView='jlist';gjAutoTask(gjFill(rec)>pf);toast('保存しました');
     }break;
-    case 'gjDel':if(S.gJE&&S.gJE.id&&confirm('この業務記録を削除しますか？')){S.gJ=S.gJ.filter(x=>x.id!==S.gJE.id);saveJ();S.gJE=null;S.gView='jlist';toast('削除しました');}break;
+    case 'gjDel':if(S.gJE&&S.gJE.id&&confirm('この業務記録を削除しますか？')){S.gJ=S.gJ.filter(x=>x.id!==S.gJE.id);saveJ();S.gJE=null;S.gJFocus=null;S.gView='jlist';toast('削除しました');}break;
   }
 }
 

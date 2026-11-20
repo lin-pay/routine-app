@@ -118,6 +118,8 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .ei{font-size:48px;margin-bottom:12px}
 .et{font-size:17px;font-weight:700;margin-bottom:6px}
 .ed{font-size:13px;color:var(--dim);line-height:1.5}
+.unsent{font-size:12px;color:#fbbf24;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:10px;padding:8px 12px;margin:4px 0 8px;text-align:center;line-height:1.5}
+.ver{text-align:center;font-size:11px;color:var(--dim);margin-top:28px}
 /* Spinner */
 .lw{display:flex;align-items:center;justify-content:center;height:100vh}
 .sp{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sn .8s linear infinite}
@@ -135,11 +137,14 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import{getAuth,signInWithPopup,signInWithRedirect,getRedirectResult,GoogleAuthProvider,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-import{getFirestore,initializeFirestore,persistentLocalCache,doc,setDoc,onSnapshot}from"https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import{getFirestore,initializeFirestore,persistentLocalCache,doc,onSnapshot,runTransaction,clearIndexedDbPersistence}from"https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
 const fbApp=initializeApp({apiKey:"AIzaSyDlttoYqI42olx_khQY2MbxAgQcozD57p4",authDomain:"routine-app-5eff3.firebaseapp.com",projectId:"routine-app-5eff3",storageBucket:"routine-app-5eff3.firebasestorage.app",messagingSenderId:"282023583014",appId:"1:282023583014:web:4669d57d2ddcce7146f5e7"});
 const auth=getAuth(fbApp);
 let db;try{db=initializeFirestore(fbApp,{localCache:persistentLocalCache(),ignoreUndefinedProperties:true});}catch(e){db=getFirestore(fbApp);}
+// 前の版が端末に残した「まだ送れていない保存」（単語帳を丸ごと書き戻すもの）を、この版の最初の起動で一度だけ捨てる。
+// 残っていると開いた直後に送られて、ほかの端末で答えた分を消してしまう。この版は保存をトランザクションでしか書かないので、以後は残らない（2026-11-21）
+const dbReady=(async()=>{try{if(localStorage.getItem('palavras_cache_v2'))return;await clearIndexedDbPersistence(db);localStorage.setItem('palavras_cache_v2','1');}catch(e){console.warn('[palavras] cache clear skipped:',e&&e.code);}})();
 
 // ── State ──
 let S={
@@ -188,18 +193,69 @@ function dueLabel(card){
 }
 
 // ── Firebase ──
-let saving=false;
-function startSync(uid){
-  S.unsub.forEach(u=>u());S.unsub=[];
+// 単語帳は users/{uid}/data/flashcards の cards（配列）1つを、端末どうしで共有する。
+// 答える・足す・直す・消すたびに、その変更（ops）だけを、サーバーの最新の単語帳に当てて書く（runTransaction）。
+// 前は手元の単語帳を丸ごと書き戻していたので、古い一覧を持った端末が、ほかの端末で答えた分や足した単語を消していた（2026-11-21 に修正）。
+// 送れなかった変更は localStorage に残し、つながったとき・開き直したときに送る。
+const VER='2026-11-21';
+const TS={f:'u',r:'ru'};  // 表（ef など）・裏（rEf など）を最後に答えた時刻。あとから届いた古い答えで、新しい答えを上書きしない
+let OPS=null,flushing=0,flushAgain=false,flushT=null,retryT=null;
+const opsKey=()=>'palavras_ops_'+S.user.uid;
+function getOps(){if(!S.user)return[];if(!OPS){try{OPS=JSON.parse(localStorage.getItem(opsKey())||'[]');}catch(e){OPS=[];}}return OPS;}
+function putOps(){if(!S.user)return;try{localStorage.setItem(opsKey(),JSON.stringify(OPS||[]));}catch(e){}}
+function addOp(op){op.o=Date.now().toString(36)+Math.random().toString(36).slice(2,7);op.at=Date.now();getOps().push(op);putOps();return op;}
+function applyOps(cards,ops){
+  const by=new Map(cards.map(c=>[c.id,c]));
+  for(const op of ops){
+    if(op.t==='add'){if(!by.has(op.card.id)){const c=JSON.parse(JSON.stringify(op.card));cards.push(c);by.set(c.id,c);}}
+    else if(op.t==='del'){if(by.delete(op.id)){const i=cards.findIndex(c=>c.id===op.id);if(i>=0)cards.splice(i,1);}}
+    else if(op.t==='set'){const c=by.get(op.id),ts=TS[op.g];if(!c||(ts&&c[ts]>op.at))continue;
+      for(const k in op.f){if(op.f[k]===null)delete c[k];else c[k]=op.f[k];}if(ts)c[ts]=op.at;}
+  }
+  return cards;
+}
+// カードの項目を変える（null は項目を消す）。g: 'f'=表の予定・'r'=裏の予定・なし=文字
+function change(id,f,g){applyOps(S.cards,[addOp({t:'set',id,f,g})]);}
+function later(ms){clearTimeout(flushT);flushT=setTimeout(flush,ms);}
+async function flush(){
+  clearTimeout(flushT);
+  await dbReady;
+  if(!S.user)return;
+  if(flushing&&Date.now()-flushing<60000){flushAgain=true;return;}
+  const ops=getOps().slice();if(!ops.length)return;
+  flushing=Date.now();
+  try{
+    const ref=doc(db,'users',S.user.uid,'data','flashcards');
+    await runTransaction(db,async tx=>{
+      const s=await tx.get(ref);
+      tx.set(ref,{cards:applyOps(s.exists()?(s.data().cards||[]):[],ops),v:2},{merge:true});
+    });
+    const sent=new Set(ops.map(o=>o.o));OPS=getOps().filter(o=>!sent.has(o.o));putOps();
+    if(S.unsent){S.unsent=false;if(S.view!=='review')render();}
+  }catch(e){
+    console.error('[palavras] save failed:',e);
+    if(!S.unsent){S.unsent=true;if(S.view!=='review')toast('⚠ まだ送れていません（つながったら自動で送ります）');}
+    clearTimeout(retryT);retryT=setTimeout(flush,30000);
+  }finally{
+    flushing=0;
+    if(flushAgain){flushAgain=false;flush();}
+  }
+}
+let syncTok=0;
+async function startSync(uid){
+  S.unsub.forEach(u=>u());S.unsub=[];OPS=null;
+  const tok=++syncTok;await dbReady;if(tok!==syncTok||!S.user||S.user.uid!==uid)return;
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','flashcards'),s=>{
-    if(saving)return;
-    if(s.exists())S.cards=s.data().cards||[];
+    // サーバーの単語帳に、まだ送れていない手元の変更を重ねる（届いた更新は捨てない）
+    S.cards=applyOps(s.exists()?(s.data().cards||[]):[],getOps());
     S.dataOk=true;
     if(S.view!=='review')render();
   }));
+  flush();
 }
-async function save(){if(!S.user)return;saving=true;try{await setDoc(doc(db,'users',S.user.uid,'data','flashcards'),{cards:S.cards});}catch(e){console.error('[palavras] save failed:',e);toast('⚠ 保存失敗 — ネット接続を確認');}finally{saving=false;}}
-onAuthStateChanged(auth,u=>{S.user=u;S.authOk=true;if(u)startSync(u.uid);else{S.dataOk=false;S.cards=[];render();}});
+window.addEventListener('online',()=>flush());
+document.addEventListener('visibilitychange',()=>flush());
+onAuthStateChanged(auth,u=>{S.user=u;S.authOk=true;if(u)startSync(u.uid);else{OPS=null;S.dataOk=false;S.cards=[];render();}});
 getRedirectResult(auth).catch(()=>{});
 async function login(){const p=new GoogleAuthProvider();try{await signInWithPopup(auth,p);}catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/popup-closed-by-user')await signInWithRedirect(auth,p);}}
 async function logout(){S.unsub.forEach(u=>u());S.unsub=[];await signOut(auth);}
@@ -236,15 +292,24 @@ function renderHome(){
     </div>
     <button class="rbtn" data-a="start" ${due.length?'':'disabled'}>${due.length?`🧠 ${due.length}枚を復習する`:'復習するカードはありません'}</button>
     <button class="lbtn" data-a="list">📋 カード一覧（${total}枚）</button>
+    ${S.unsent&&getOps().length?`<div class="unsent">⏳ まだ送れていない記録が${getOps().length}件あります。つながったら自動で送ります</div>`:''}
     ${!total?`<div class="empty"><div class="ei">🇧🇷</div><div class="et">カードを追加しましょう</div><div class="ed">＋ボタンからポルトガル語の<br>フラッシュカードを追加できます</div></div>`:''}
+    <div class="ver">${VER} 版</div>
   </div><button class="fab" data-a="add">＋</button>`;
 }
 
+function isDue(c,rev){const t=fmtD(new Date());return rev?!!(c.rNextReview&&c.rNextReview<=t):(!c.nextReview||c.nextReview<=t);}
 function renderReview(){
+  // 次のカードに進むときだけ、ほかの端末で答え済みになった（期日が先になった）カードと、消えたカードを飛ばす。
+  // 表示中のカードは、消えていない限り替えない（答えを見ている途中で別の単語に変わらないように）
+  const at=i=>{const e=S.queue[i];return e&&S.cards.find(x=>x.id===e.id);};
+  if(S.shown!==S.idx||!at(S.idx)){
+    while(S.idx<S.queue.length){const c=at(S.idx);if(c&&isDue(c,S.queue[S.idx].rev))break;S.idx++;}
+    S.shown=S.idx;S.flipped=false;
+  }
   if(S.idx>=S.queue.length)return renderDone();
   const entry=S.queue[S.idx];
-  const card=S.cards.find(c=>c.id===entry.id);
-  if(!card)return renderDone();
+  const card=at(S.idx);
   const fl=S.flipped,rev=entry.rev;
   const front=rev?card.ja:card.pt,back=rev?card.pt:card.ja;
   const fLang=rev?'日本語':'Português',bLang=rev?'Português':'日本語';
@@ -275,7 +340,7 @@ function renderReview(){
 }
 
 function renderDone(){
-  const n=S.queue.length,rc=S.rcounts;
+  const n=S.nrev||0,rc=S.rcounts;
   return `<div class="app-inner">
     <div class="done">
       <div class="done-i">🎉</div>
@@ -353,24 +418,24 @@ function handleA(e){
   switch(a){
     case 'login':login();break;
     case 'logout':logout();break;
-    case 'home':S.view='home';S.pop=null;render();break;
+    case 'home':S.view='home';S.pop=null;flush();render();break;
     case 'start':{
       const due=getDue();
       const reviewed=due.filter(d=>{const c=d.card;return d.rev?(c.rReps||0)>0||(c.rInterval||0)>0:c.reps>0||c.interval>0;}).sort(()=>Math.random()-.5);
       const fresh=due.filter(d=>{const c=d.card;return d.rev?!(c.rReps||0)&&!(c.rInterval||0):!c.reps&&!c.interval;}).sort(()=>Math.random()-.5);
       S.queue=[...reviewed,...fresh].map(d=>({id:d.card.id,rev:d.rev}));
-      S.idx=0;S.flipped=false;S.lastRating=null;S.view='review';render();
+      S.idx=0;S.shown=-1;S.nrev=0;S.flipped=false;S.lastRating=null;S.view='review';render();
     }break;
     case 'flip':S.flipped=true;render();break;
     case 'rate':{
       const entry=S.queue[S.idx];
-      const card=S.cards.find(c=>c.id===entry.id);
-      if(card){const r=parseInt(v);
-        S.lastRating={idx:S.idx,rating:r,snap:{ef:card.ef,interval:card.interval,reps:card.reps,nextReview:card.nextReview,rEf:card.rEf,rInterval:card.rInterval,rReps:card.rReps,rNextReview:card.rNextReview}};
-        S.rcounts[r]++;saveRC();
-        if(entry.rev){const src={ef:card.rEf||2.5,interval:card.rInterval||0,reps:card.rReps||0};const upd=sm2(src,r);card.rEf=upd.ef;card.rInterval=upd.interval;card.rReps=upd.reps;card.rNextReview=upd.nextReview;}
-        else{const upd=sm2(card,r);Object.assign(card,upd);if(r>=2&&!card.rNextReview){const d=new Date();d.setDate(d.getDate()+1);card.rNextReview=fmtD(d);}}
-        save();}
+      const card=entry&&S.cards.find(c=>c.id===entry.id);
+      if(card){const r=parseInt(v);let f,g;
+        if(entry.rev){const upd=sm2({ef:card.rEf||2.5,interval:card.rInterval||0,reps:card.rReps||0},r);f={rEf:upd.ef,rInterval:upd.interval,rReps:upd.reps,rNextReview:upd.nextReview};g='r';}
+        else{const upd=sm2(card,r);f={ef:upd.ef,interval:upd.interval,reps:upd.reps,nextReview:upd.nextReview};g='f';if(r>=2&&!card.rNextReview){const d=new Date();d.setDate(d.getDate()+1);f.rNextReview=fmtD(d);}}
+        S.lastRating={idx:S.idx,rating:r,g,keys:Object.keys(f),snap:{ef:card.ef,interval:card.interval,reps:card.reps,nextReview:card.nextReview,rEf:card.rEf,rInterval:card.rInterval,rReps:card.rReps,rNextReview:card.rNextReview}};
+        S.rcounts[r]++;saveRC();S.nrev=(S.nrev||0)+1;
+        change(card.id,f,g);later(1500);}
       S.idx++;S.flipped=false;render();
     }break;
     case 'list':S.view='list';S.search='';S.pop=null;render();break;
@@ -379,26 +444,27 @@ function handleA(e){
       const c=S.cards.find(c=>c.id===id);
       if(c){S.form={pt:c.pt,ja:c.ja,note:c.note||'',ex:c.ex||''};S.editId=id;S.view='edit';S.pop=null;render();}
     }break;
-    case 'del':S.cards=S.cards.filter(c=>c.id!==id);S.pop=null;save();toast('削除しました');break;
+    case 'del':S.cards=S.cards.filter(c=>c.id!==id);addOp({t:'del',id});flush();S.pop=null;toast('削除しました');break;
     case 'more':e.stopPropagation();S.pop=S.pop===id?null:id;render();break;
     case 'closepop':S.pop=null;render();break;
     case 'save':
       if(!S.form.pt.trim()||!S.form.ja.trim())return;
       if(S.view==='edit'&&S.editId){
-        const c=S.cards.find(c=>c.id===S.editId);
-        if(c){c.pt=S.form.pt.trim();c.ja=S.form.ja.trim();c.note=S.form.note.trim();c.ex=S.form.ex.trim();}
+        if(S.cards.some(c=>c.id===S.editId))change(S.editId,{pt:S.form.pt.trim(),ja:S.form.ja.trim(),note:S.form.note.trim(),ex:S.form.ex.trim()});
       }else{
-        S.cards.push({id:'fc_'+Date.now(),pt:S.form.pt.trim(),ja:S.form.ja.trim(),note:S.form.note.trim(),ex:S.form.ex.trim(),ef:2.5,interval:0,reps:0,nextReview:fmtD(new Date()),rEf:2.5,rInterval:0,rReps:0,rNextReview:fmtD(new Date()),createdAt:Date.now()});
+        const card={id:'fc_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),pt:S.form.pt.trim(),ja:S.form.ja.trim(),note:S.form.note.trim(),ex:S.form.ex.trim(),ef:2.5,interval:0,reps:0,nextReview:fmtD(new Date()),rEf:2.5,rInterval:0,rReps:0,rNextReview:fmtD(new Date()),createdAt:Date.now()};
+        S.cards.push(card);addOp({t:'add',card:JSON.parse(JSON.stringify(card))});
       }
-      save();S.view=S.editId?'list':'home';S.editId=null;toast('保存しました');
+      flush();S.view=S.editId?'list':'home';S.editId=null;toast('保存しました');
     break;
     case 'undo':{
       const lr=S.lastRating;if(!lr)break;
       const entry=S.queue[lr.idx];
-      const card=S.cards.find(c=>c.id===entry.id);
-      if(card){for(const k in lr.snap){if(lr.snap[k]===undefined)delete card[k];else card[k]=lr.snap[k];}}
-      S.rcounts[lr.rating]--;saveRC();
-      S.idx=lr.idx;S.flipped=false;S.lastRating=null;save();render();
+      // 取り消すのは、その評価で変えた項目だけ（もとが無かった項目は消す）
+      const f={};for(const k of lr.keys)f[k]=lr.snap[k]===undefined?null:lr.snap[k];
+      change(entry.id,f,lr.g);later(1500);
+      S.rcounts[lr.rating]--;saveRC();S.nrev=Math.max(0,(S.nrev||0)-1);
+      S.idx=lr.idx;S.flipped=false;S.lastRating=null;render();
     }break;
     case 'cancel':S.view=S.editId?'list':'home';S.editId=null;render();break;
   }

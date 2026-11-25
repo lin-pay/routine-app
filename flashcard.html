@@ -210,7 +210,9 @@ function preview(card,rev,rating){const src=rev?{ef:card.rEf||2.5,interval:card.
 // 復習を最後まで終えないと出てこなかった（「既出ばっかりに偏っちゃう」）。
 // 新しい単語は、最近（30日以内）足した単語から足した順に、そのあとはばらばらに。入れた日をカードの nd に書く（今日の数はどの端末でも同じ）。
 // 裏（日本語→ポルトガル語）の初めては、表に一度正解してから。表が今日の復習に入っている・今日表に答えた単語の裏は、次の日にまわす。
-// 復習は期日が近いもの（覚えたての単語）から。全部終えられない日でも、入れたばかりの単語の復習が後回しにならないように
+// 復習は、表（ポルトガル語→日本語）と裏（日本語→ポルトガル語）を混ぜて、ばらばらに出す（2026-11-25c）。
+// 前は期日が近い順で、裏の多くは期日が取り込んだ日（3月）のままなので、最後にまとまって出ていた（「固まってる、ランダムに出して」）。
+// 同じ単語の表と裏が両方あるときは、並べる重みを半周ずらして、だいたい半分ほど離す（続けて出ると、あとの方の答えがわかってしまう）
 // 今日どこまでやればいいか（2026-11-25）: 今日の分 = 今日もう答えた枚数＋残り。ホーム・復習中・終わりの画面に「x / y枚・あと z枚」を出す。
 // 答えた枚数は、今日答えて期日が明日以降になった表（u）・裏（ru）の数（ほかの端末で答えた分も入る。取り消した答えは入らない）
 const NEW_DEF=5,NEW_EVERY=3,NEW_STEP=5,NEW_MAX=50,RECENT=30*864e5;
@@ -235,14 +237,17 @@ function dayStat(){
   return{done,rev:rev.length,nn,fresh:fresh.length,todo,all:done+todo};
 }
 const pct=d=>d.all?Math.round(d.done/d.all*100):0;
+// ばらばらに並べる（1枚ずつ重みを引いて、重みの順に並べる。Math.random を止めると元の順のまま＝検証で順番を決めるため）
+const byWeight=a=>a.sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
+const shuffle=a=>byWeight(a.map(x=>[Math.random(),x]));
 function buildQueue(){
   const{rev,fresh,left}=todaySet(),now=Date.now(),recent=c=>c.createdAt>now-RECENT;
-  const picks=[...fresh.filter(recent).sort((a,b)=>a.createdAt-b.createdAt),...fresh.filter(c=>!recent(c)).sort(()=>Math.random()-.5)].slice(0,left);
-  rev.sort(()=>Math.random()-.5).sort((a,b)=>b.due.localeCompare(a.due));
+  const picks=[...fresh.filter(recent).sort((a,b)=>a.createdAt-b.createdAt),...shuffle(fresh.filter(c=>!recent(c)))].slice(0,left);
+  const w=new Map(),mix=byWeight(rev.map(e=>{const k=w.get(e.card.id);if(k===undefined){const r=Math.random();w.set(e.card.id,r);return[r,e];}return[(k+.5)%1,e];}));
   const q=[];let i=0,j=0;
-  while(i<picks.length||j<rev.length){
-    if(i<picks.length&&(q.length%NEW_EVERY===0||j>=rev.length))q.push({id:picks[i++].id,rev:false,nw:true});
-    else{q.push({id:rev[j].card.id,rev:rev[j].rev});j++;}
+  while(i<picks.length||j<mix.length){
+    if(i<picks.length&&(q.length%NEW_EVERY===0||j>=mix.length))q.push({id:picks[i++].id,rev:false,nw:true});
+    else{q.push({id:mix[j].card.id,rev:mix[j].rev});j++;}
   }
   return q;
 }
@@ -260,7 +265,7 @@ function dueLabel(card){
 // 前は手元の単語帳を丸ごと書き戻していたので、古い一覧を持った端末が、ほかの端末で答えた分や足した単語を消していた（2026-11-21 に修正）。
 // 送れなかった変更は localStorage に残し、つながったとき・開き直したときに送る。
 // 設定（1日の新しい単語の数 npd）も同じ文書に置き、変更（cfg）を同じように送る
-const VER='2026-11-25b';
+const VER='2026-11-25c';
 const TS={f:'u',r:'ru'};  // 表（ef など）・裏（rEf など）を最後に答えた時刻。あとから届いた古い答えで、新しい答えを上書きしない
 let OPS=null,flushing=0,flushAgain=false,flushT=null,retryT=null;
 const opsKey=()=>'palavras_ops_'+S.user.uid;

@@ -131,6 +131,16 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .npd-v{font-size:14px;font-weight:700;color:#60a5fa;min-width:64px;text-align:center}
 .npd-sub{font-size:11px;color:var(--dim);margin-top:6px}
 .rcard-new{font-size:10px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:5px;background:rgba(96,165,250,.15);color:#60a5fa;margin-bottom:10px}
+/* 今日の分の進み具合 */
+.day{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+.day-row{display:flex;align-items:baseline;justify-content:space-between;font-size:13px;color:var(--mid)}
+.day-v{color:var(--dim)}
+.day-v b{font-size:20px;font-weight:900;color:var(--accent);margin-right:2px}
+.bar{height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden;margin:8px 0}
+.bar-f{height:100%;border-radius:4px;background:linear-gradient(90deg,#22c55e,#4ade80)}
+.day .plan{margin:0;text-align:left}
+.prog .bar{margin:0 0 6px}
+.done-day{font-size:14px;font-weight:700;color:var(--accent);margin-top:10px}
 /* Spinner */
 .lw{display:flex;align-items:center;justify-content:center;height:100vh}
 .sp{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sn .8s linear infinite}
@@ -195,13 +205,15 @@ function sm2(card,rating){
 function ivLabel(days){if(days<=0)return'<1日';if(days===1)return'1日';if(days<30)return days+'日';if(days<365)return Math.round(days/30)+'ヶ月';return Math.round(days/365)+'年';}
 function preview(card,rev,rating){const src=rev?{ef:card.rEf||2.5,interval:card.rInterval||0,reps:card.rReps||0}:card;return ivLabel(sm2(src,rating).interval);}
 // ── 今日の分（2026-11-25）──
-// 新しい単語（表をまだ一度も答えていないカード）は1日 npd 語まで（既定10、ホームの −/＋ で変える。どの端末でも同じ数）、復習の中に3枚に1枚の割合で混ぜる。
+// 新しい単語（表をまだ一度も答えていないカード）は1日 npd 語まで（既定5、ホームの −/＋ で変える。どの端末でも同じ数）、復習の中に3枚に1枚の割合で混ぜる。
 // 前は期日が来たカードを「覚えたことのあるもの → 新しいもの」の順に全部並べていたので、新しい単語（約1900語）は、
 // 復習を最後まで終えないと出てこなかった（「既出ばっかりに偏っちゃう」）。
 // 新しい単語は、最近（30日以内）足した単語から足した順に、そのあとはばらばらに。入れた日をカードの nd に書く（今日の数はどの端末でも同じ）。
 // 裏（日本語→ポルトガル語）の初めては、表に一度正解してから。表が今日の復習に入っている・今日表に答えた単語の裏は、次の日にまわす。
 // 復習は期日が近いもの（覚えたての単語）から。全部終えられない日でも、入れたばかりの単語の復習が後回しにならないように
-const NEW_DEF=10,NEW_EVERY=3,NEW_STEP=5,NEW_MAX=50,RECENT=30*864e5;
+// 今日どこまでやればいいか（2026-11-25）: 今日の分 = 今日もう答えた枚数＋残り。ホーム・復習中・終わりの画面に「x / y枚・あと z枚」を出す。
+// 答えた枚数は、今日答えて期日が明日以降になった表（u）・裏（ru）の数（ほかの端末で答えた分も入る。取り消した答えは入らない）
+const NEW_DEF=5,NEW_EVERY=3,NEW_STEP=5,NEW_MAX=50,RECENT=30*864e5;
 const isNewF=c=>!c.reps&&!c.interval;
 const isNewR=c=>!(c.rReps||0)&&!(c.rInterval||0);
 const npd=()=>S.npd??NEW_DEF;
@@ -213,11 +225,19 @@ function todaySet(){
     if(nf)fresh.push(c);else if(fDue)rev.push({card:c,rev:false,due:c.nextReview||''});
     if(c.rNextReview&&c.rNextReview<=t&&(!isNewR(c)||((c.reps||0)>=1&&!fDue&&!(c.u&&fmtD(new Date(c.u))===t))))rev.push({card:c,rev:true,due:c.rNextReview});
   }
-  const now=Date.now(),recent=c=>c.createdAt>now-RECENT;
-  return{rev,fresh:[...fresh.filter(recent).sort((a,b)=>a.createdAt-b.createdAt),...fresh.filter(c=>!recent(c)).sort(()=>Math.random()-.5)],left:Math.max(0,npd()-newToday())};
+  return{rev,fresh,left:Math.max(0,npd()-newToday())};
 }
+// 今日の分の進み具合。done=今日答え終えた枚数、todo=残り（復習＋今日まだ入れる新しい単語）、all=今日の分の全部
+function dayStat(){
+  const{rev,fresh,left}=todaySet(),t=fmtD(new Date()),today=x=>!!x&&fmtD(new Date(x))===t;
+  let done=0;for(const c of S.cards){if(today(c.u)&&c.nextReview>t)done++;if(today(c.ru)&&c.rNextReview>t)done++;}
+  const nn=Math.min(left,fresh.length),todo=rev.length+nn;
+  return{done,rev:rev.length,nn,fresh:fresh.length,todo,all:done+todo};
+}
+const pct=d=>d.all?Math.round(d.done/d.all*100):0;
 function buildQueue(){
-  const{rev,fresh,left}=todaySet(),picks=fresh.slice(0,left);
+  const{rev,fresh,left}=todaySet(),now=Date.now(),recent=c=>c.createdAt>now-RECENT;
+  const picks=[...fresh.filter(recent).sort((a,b)=>a.createdAt-b.createdAt),...fresh.filter(c=>!recent(c)).sort(()=>Math.random()-.5)].slice(0,left);
   rev.sort(()=>Math.random()-.5).sort((a,b)=>b.due.localeCompare(a.due));
   const q=[];let i=0,j=0;
   while(i<picks.length||j<rev.length){
@@ -240,7 +260,7 @@ function dueLabel(card){
 // 前は手元の単語帳を丸ごと書き戻していたので、古い一覧を持った端末が、ほかの端末で答えた分や足した単語を消していた（2026-11-21 に修正）。
 // 送れなかった変更は localStorage に残し、つながったとき・開き直したときに送る。
 // 設定（1日の新しい単語の数 npd）も同じ文書に置き、変更（cfg）を同じように送る
-const VER='2026-11-25';
+const VER='2026-11-25b';
 const TS={f:'u',r:'ru'};  // 表（ef など）・裏（rEf など）を最後に答えた時刻。あとから届いた古い答えで、新しい答えを上書きしない
 let OPS=null,flushing=0,flushAgain=false,flushT=null,retryT=null;
 const opsKey=()=>'palavras_ops_'+S.user.uid;
@@ -327,20 +347,24 @@ function renderLogin(){
 }
 
 function renderHome(){
-  const{rev,fresh,left}=todaySet(),nn=Math.min(left,fresh.length),todo=rev.length+nn,total=S.cards.length,n=npd();
+  const d=dayStat(),todo=d.todo,total=S.cards.length,n=npd();
   const mastered=S.cards.filter(c=>(c.interval||0)>=30).length;
   return `<div class="app-inner">
     <div class="header"><div><div class="date-label">${dlabel()}</div><div class="greeting">Palavras</div></div><button class="hbtn" data-a="logout" title="ログアウト">↗</button></div>
     <div class="stats">
-      <div class="stat"><div class="stat-v">${todo}</div><div class="stat-l">今日の分</div></div>
+      <div class="stat"><div class="stat-v">${todo}</div><div class="stat-l">今日の残り</div></div>
       <div class="stat"><div class="stat-v">${total}</div><div class="stat-l">総カード</div></div>
       <div class="stat"><div class="stat-v">${mastered}</div><div class="stat-l">習得済み</div></div>
     </div>
-    <button class="rbtn" data-a="start" ${todo?'':'disabled'}>${todo?`🧠 今日の分をやる（${todo}枚）`:total?'今日の分は終わりました 🎉':'カードがありません'}</button>
-    ${todo?`<div class="plan">復習 ${rev.length}枚 ＋ 新しい単語 ${nn}語</div>`:''}
+    ${d.all?`<div class="day">
+      <div class="day-row"><span>今日の分${todo?'':' ✓'}</span><span class="day-v"><b>${d.done}</b> / ${d.all}枚</span></div>
+      <div class="bar"><div class="bar-f" style="width:${pct(d)}%"></div></div>
+      ${todo?`<div class="plan">あと ${todo}枚（復習 ${d.rev}枚 ＋ 新しい単語 ${d.nn}語）</div>`:''}
+    </div>`:''}
+    <button class="rbtn" data-a="start" ${todo?'':'disabled'}>${todo?(d.done?'🧠 続きをやる':'🧠 今日の分をやる'):total?'今日の分は終わりました 🎉':'カードがありません'}</button>
     ${total?`<div class="npd">
       <div class="npd-row"><span>新しい単語</span><span class="npd-ctl"><button class="npd-b" data-a="npd" data-v="-${NEW_STEP}" ${n<=0?'disabled':''}>−</button><span class="npd-v">1日 ${n}語</span><button class="npd-b" data-a="npd" data-v="${NEW_STEP}" ${n>=NEW_MAX?'disabled':''}>＋</button></span></div>
-      <div class="npd-sub">今日 ${newToday()}語 ・ まだの単語 ${fresh.length}語</div>
+      <div class="npd-sub">今日 ${newToday()}語 ・ まだの単語 ${d.fresh}語</div>
     </div>`:''}
     <button class="lbtn" data-a="list">📋 カード一覧（${total}枚）</button>
     ${S.unsent&&getOps().length?`<div class="unsent">⏳ まだ送れていない記録が${getOps().length}件あります。つながったら自動で送ります</div>`:''}
@@ -365,9 +389,10 @@ function renderReview(){
   const fl=S.flipped,rev=entry.rev;
   const front=rev?card.ja:card.pt,back=rev?card.pt:card.ja;
   const fLang=rev?'日本語':'Português',bLang=rev?'Português':'日本語';
+  const d=dayStat();
   return `<div class="app-inner">
     <button class="back" data-a="home">← やめる</button>
-    <div class="prog">${S.idx+1} / ${S.queue.length}</div>
+    <div class="prog"><div class="bar"><div class="bar-f" style="width:${pct(d)}%"></div></div>今日 ${d.done} / ${d.all}枚 ・ あと ${d.todo}枚</div>
     <div class="rcard" data-a="flip">
       ${entry.nw?'<div class="rcard-new">NEW</div>':''}
       <div class="rcard-lang">${fl?bLang:fLang}</div>
@@ -393,12 +418,14 @@ function renderReview(){
 }
 
 function renderDone(){
-  const n=S.nrev||0,rc=S.rcounts;
+  // 今日の分が残っていれば（日付が変わった・カードが増えたなど）、あと何枚かと「続きをやる」を出す
+  const n=S.nrev||0,rc=S.rcounts,d=dayStat(),fin=!d.todo;
   return `<div class="app-inner">
     <div class="done">
-      <div class="done-i">🎉</div>
-      <div class="done-t">復習完了！</div>
+      <div class="done-i">${fin?'🎉':'👍'}</div>
+      <div class="done-t">${fin?'今日の分おわり！':'ひと区切り'}</div>
       <div class="done-d">${n}枚のカードを復習しました${S.nnew?`（うち新しい単語 ${S.nnew}語）`:''}</div>
+      <div class="done-day">${fin?`今日の ${d.done}枚 ぜんぶ終わりました。また明日！`:`今日の分は あと ${d.todo}枚`}</div>
     </div>
     <div class="rcounts" style="justify-content:center;gap:20px;margin:20px 0;font-size:13px">
       <div class="rc-item"><span class="rc-dot rc-d0"></span>もう一度 <span class="rc-v">${rc[0]}</span></div>
@@ -407,7 +434,8 @@ function renderDone(){
       <div class="rc-item"><span class="rc-dot rc-d3"></span>簡単 <span class="rc-v">${rc[3]}</span></div>
     </div>
     ${S.lastRating?`<button class="lbtn" data-a="undo" style="margin-bottom:12px">↩ 最後の評価を取り消す</button>`:''}
-    <button class="rbtn" data-a="home">ホームに戻る</button>
+    ${fin?'':`<button class="rbtn" data-a="start">🧠 続きをやる（あと ${d.todo}枚）</button>`}
+    <button class="${fin?'rbtn':'lbtn'}" data-a="home">ホームに戻る</button>
   </div>`;
 }
 

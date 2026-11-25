@@ -120,6 +120,17 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .ed{font-size:13px;color:var(--dim);line-height:1.5}
 .unsent{font-size:12px;color:#fbbf24;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:10px;padding:8px 12px;margin:4px 0 8px;text-align:center;line-height:1.5}
 .ver{text-align:center;font-size:11px;color:var(--dim);margin-top:28px}
+/* 今日の分・新しい単語の数 */
+.plan{font-size:12px;color:var(--mid);text-align:center;margin:-4px 0 12px}
+.npd{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:12px}
+.npd-row{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--mid)}
+.npd-ctl{display:flex;align-items:center;gap:10px}
+.npd-b{width:32px;height:32px;border-radius:9px;background:var(--sh);border:1px solid var(--border);color:var(--text);font-size:17px;font-family:var(--font);cursor:pointer;line-height:1}
+.npd-b:active{background:var(--aglow)}
+.npd-b:disabled{opacity:.3}
+.npd-v{font-size:14px;font-weight:700;color:#60a5fa;min-width:64px;text-align:center}
+.npd-sub{font-size:11px;color:var(--dim);margin-top:6px}
+.rcard-new{font-size:10px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:5px;background:rgba(96,165,250,.15);color:#60a5fa;margin-bottom:10px}
 /* Spinner */
 .lw{display:flex;align-items:center;justify-content:center;height:100vh}
 .sp{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sn .8s linear infinite}
@@ -183,9 +194,40 @@ function sm2(card,rating){
 }
 function ivLabel(days){if(days<=0)return'<1日';if(days===1)return'1日';if(days<30)return days+'日';if(days<365)return Math.round(days/30)+'ヶ月';return Math.round(days/365)+'年';}
 function preview(card,rev,rating){const src=rev?{ef:card.rEf||2.5,interval:card.rInterval||0,reps:card.rReps||0}:card;return ivLabel(sm2(src,rating).interval);}
-function getDue(){const today=fmtD(new Date());const due=[];S.cards.forEach(c=>{if(!c.nextReview||c.nextReview<=today)due.push({card:c,rev:false});if(c.rNextReview&&c.rNextReview<=today)due.push({card:c,rev:true});});return due;}
+// ── 今日の分（2026-11-25）──
+// 新しい単語（表をまだ一度も答えていないカード）は1日 npd 語まで（既定10、ホームの −/＋ で変える。どの端末でも同じ数）、復習の中に3枚に1枚の割合で混ぜる。
+// 前は期日が来たカードを「覚えたことのあるもの → 新しいもの」の順に全部並べていたので、新しい単語（約1900語）は、
+// 復習を最後まで終えないと出てこなかった（「既出ばっかりに偏っちゃう」）。
+// 新しい単語は、最近（30日以内）足した単語から足した順に、そのあとはばらばらに。入れた日をカードの nd に書く（今日の数はどの端末でも同じ）。
+// 裏（日本語→ポルトガル語）の初めては、表に一度正解してから。表が今日の復習に入っている・今日表に答えた単語の裏は、次の日にまわす。
+// 復習は期日が近いもの（覚えたての単語）から。全部終えられない日でも、入れたばかりの単語の復習が後回しにならないように
+const NEW_DEF=10,NEW_EVERY=3,NEW_STEP=5,NEW_MAX=50,RECENT=30*864e5;
+const isNewF=c=>!c.reps&&!c.interval;
+const isNewR=c=>!(c.rReps||0)&&!(c.rInterval||0);
+const npd=()=>S.npd??NEW_DEF;
+function newToday(){const t=fmtD(new Date());let n=0;for(const c of S.cards)if(c.nd===t)n++;return n;}
+function todaySet(){
+  const t=fmtD(new Date()),rev=[],fresh=[];
+  for(const c of S.cards){
+    const nf=isNewF(c),fDue=!nf&&(!c.nextReview||c.nextReview<=t);
+    if(nf)fresh.push(c);else if(fDue)rev.push({card:c,rev:false,due:c.nextReview||''});
+    if(c.rNextReview&&c.rNextReview<=t&&(!isNewR(c)||((c.reps||0)>=1&&!fDue&&!(c.u&&fmtD(new Date(c.u))===t))))rev.push({card:c,rev:true,due:c.rNextReview});
+  }
+  const now=Date.now(),recent=c=>c.createdAt>now-RECENT;
+  return{rev,fresh:[...fresh.filter(recent).sort((a,b)=>a.createdAt-b.createdAt),...fresh.filter(c=>!recent(c)).sort(()=>Math.random()-.5)],left:Math.max(0,npd()-newToday())};
+}
+function buildQueue(){
+  const{rev,fresh,left}=todaySet(),picks=fresh.slice(0,left);
+  rev.sort(()=>Math.random()-.5).sort((a,b)=>b.due.localeCompare(a.due));
+  const q=[];let i=0,j=0;
+  while(i<picks.length||j<rev.length){
+    if(i<picks.length&&(q.length%NEW_EVERY===0||j>=rev.length))q.push({id:picks[i++].id,rev:false,nw:true});
+    else{q.push({id:rev[j].card.id,rev:rev[j].rev});j++;}
+  }
+  return q;
+}
 function dueLabel(card){
-  if(!card.nextReview)return{text:'NEW',cls:'due-new'};
+  if(isNewF(card))return{text:'NEW',cls:'due-new'};
   const today=fmtD(new Date());
   if(card.nextReview<=today)return{text:'復習',cls:'due-now'};
   const diff=Math.round((parseD(card.nextReview)-new Date())/(1000*60*60*24));
@@ -197,7 +239,8 @@ function dueLabel(card){
 // 答える・足す・直す・消すたびに、その変更（ops）だけを、サーバーの最新の単語帳に当てて書く（runTransaction）。
 // 前は手元の単語帳を丸ごと書き戻していたので、古い一覧を持った端末が、ほかの端末で答えた分や足した単語を消していた（2026-11-21 に修正）。
 // 送れなかった変更は localStorage に残し、つながったとき・開き直したときに送る。
-const VER='2026-11-21';
+// 設定（1日の新しい単語の数 npd）も同じ文書に置き、変更（cfg）を同じように送る
+const VER='2026-11-25';
 const TS={f:'u',r:'ru'};  // 表（ef など）・裏（rEf など）を最後に答えた時刻。あとから届いた古い答えで、新しい答えを上書きしない
 let OPS=null,flushing=0,flushAgain=false,flushT=null,retryT=null;
 const opsKey=()=>'palavras_ops_'+S.user.uid;
@@ -226,9 +269,10 @@ async function flush(){
   flushing=Date.now();
   try{
     const ref=doc(db,'users',S.user.uid,'data','flashcards');
+    const cfg={};for(const o of ops)if(o.t==='cfg')cfg[o.k]=o.v;
     await runTransaction(db,async tx=>{
       const s=await tx.get(ref);
-      tx.set(ref,{cards:applyOps(s.exists()?(s.data().cards||[]):[],ops),v:2},{merge:true});
+      tx.set(ref,{cards:applyOps(s.exists()?(s.data().cards||[]):[],ops),v:2,...cfg},{merge:true});
     });
     const sent=new Set(ops.map(o=>o.o));OPS=getOps().filter(o=>!sent.has(o.o));putOps();
     if(S.unsent){S.unsent=false;if(S.view!=='review')render();}
@@ -247,7 +291,9 @@ async function startSync(uid){
   const tok=++syncTok;await dbReady;if(tok!==syncTok||!S.user||S.user.uid!==uid)return;
   S.unsub.push(onSnapshot(doc(db,'users',uid,'data','flashcards'),s=>{
     // サーバーの単語帳に、まだ送れていない手元の変更を重ねる（届いた更新は捨てない）
-    S.cards=applyOps(s.exists()?(s.data().cards||[]):[],getOps());
+    const d=s.exists()?s.data():{};
+    S.cards=applyOps(d.cards||[],getOps());
+    S.npd=d.npd;for(const o of getOps())if(o.t==='cfg'&&o.k==='npd')S.npd=o.v;
     S.dataOk=true;
     if(S.view!=='review')render();
   }));
@@ -281,16 +327,21 @@ function renderLogin(){
 }
 
 function renderHome(){
-  const due=getDue(),total=S.cards.length;
+  const{rev,fresh,left}=todaySet(),nn=Math.min(left,fresh.length),todo=rev.length+nn,total=S.cards.length,n=npd();
   const mastered=S.cards.filter(c=>(c.interval||0)>=30).length;
   return `<div class="app-inner">
     <div class="header"><div><div class="date-label">${dlabel()}</div><div class="greeting">Palavras</div></div><button class="hbtn" data-a="logout" title="ログアウト">↗</button></div>
     <div class="stats">
-      <div class="stat"><div class="stat-v">${due.length}</div><div class="stat-l">復習待ち</div></div>
+      <div class="stat"><div class="stat-v">${todo}</div><div class="stat-l">今日の分</div></div>
       <div class="stat"><div class="stat-v">${total}</div><div class="stat-l">総カード</div></div>
       <div class="stat"><div class="stat-v">${mastered}</div><div class="stat-l">習得済み</div></div>
     </div>
-    <button class="rbtn" data-a="start" ${due.length?'':'disabled'}>${due.length?`🧠 ${due.length}枚を復習する`:'復習するカードはありません'}</button>
+    <button class="rbtn" data-a="start" ${todo?'':'disabled'}>${todo?`🧠 今日の分をやる（${todo}枚）`:total?'今日の分は終わりました 🎉':'カードがありません'}</button>
+    ${todo?`<div class="plan">復習 ${rev.length}枚 ＋ 新しい単語 ${nn}語</div>`:''}
+    ${total?`<div class="npd">
+      <div class="npd-row"><span>新しい単語</span><span class="npd-ctl"><button class="npd-b" data-a="npd" data-v="-${NEW_STEP}" ${n<=0?'disabled':''}>−</button><span class="npd-v">1日 ${n}語</span><button class="npd-b" data-a="npd" data-v="${NEW_STEP}" ${n>=NEW_MAX?'disabled':''}>＋</button></span></div>
+      <div class="npd-sub">今日 ${newToday()}語 ・ まだの単語 ${fresh.length}語</div>
+    </div>`:''}
     <button class="lbtn" data-a="list">📋 カード一覧（${total}枚）</button>
     ${S.unsent&&getOps().length?`<div class="unsent">⏳ まだ送れていない記録が${getOps().length}件あります。つながったら自動で送ります</div>`:''}
     ${!total?`<div class="empty"><div class="ei">🇧🇷</div><div class="et">カードを追加しましょう</div><div class="ed">＋ボタンからポルトガル語の<br>フラッシュカードを追加できます</div></div>`:''}
@@ -301,10 +352,11 @@ function renderHome(){
 function isDue(c,rev){const t=fmtD(new Date());return rev?!!(c.rNextReview&&c.rNextReview<=t):(!c.nextReview||c.nextReview<=t);}
 function renderReview(){
   // 次のカードに進むときだけ、ほかの端末で答え済みになった（期日が先になった）カードと、消えたカードを飛ばす。
+  // 新しい単語は、ほかの端末で答え済みになったもの・ほかの端末と合わせて今日の数（npd）に達したあとのものを飛ばす。
   // 表示中のカードは、消えていない限り替えない（答えを見ている途中で別の単語に変わらないように）
   const at=i=>{const e=S.queue[i];return e&&S.cards.find(x=>x.id===e.id);};
   if(S.shown!==S.idx||!at(S.idx)){
-    while(S.idx<S.queue.length){const c=at(S.idx);if(c&&isDue(c,S.queue[S.idx].rev))break;S.idx++;}
+    while(S.idx<S.queue.length){const e=S.queue[S.idx],c=at(S.idx);if(c&&(e.nw?isNewF(c)&&newToday()<npd():isDue(c,e.rev)))break;S.idx++;}
     S.shown=S.idx;S.flipped=false;
   }
   if(S.idx>=S.queue.length)return renderDone();
@@ -317,6 +369,7 @@ function renderReview(){
     <button class="back" data-a="home">← やめる</button>
     <div class="prog">${S.idx+1} / ${S.queue.length}</div>
     <div class="rcard" data-a="flip">
+      ${entry.nw?'<div class="rcard-new">NEW</div>':''}
       <div class="rcard-lang">${fl?bLang:fLang}</div>
       <div class="rcard-word">${fl?esc(back):esc(front)}</div>
       ${fl&&card.note?`<div class="rcard-note">${esc(card.note)}</div>`:''}
@@ -345,7 +398,7 @@ function renderDone(){
     <div class="done">
       <div class="done-i">🎉</div>
       <div class="done-t">復習完了！</div>
-      <div class="done-d">${n}枚のカードを復習しました</div>
+      <div class="done-d">${n}枚のカードを復習しました${S.nnew?`（うち新しい単語 ${S.nnew}語）`:''}</div>
     </div>
     <div class="rcounts" style="justify-content:center;gap:20px;margin:20px 0;font-size:13px">
       <div class="rc-item"><span class="rc-dot rc-d0"></span>もう一度 <span class="rc-v">${rc[0]}</span></div>
@@ -419,22 +472,23 @@ function handleA(e){
     case 'login':login();break;
     case 'logout':logout();break;
     case 'home':S.view='home';S.pop=null;flush();render();break;
-    case 'start':{
-      const due=getDue();
-      const reviewed=due.filter(d=>{const c=d.card;return d.rev?(c.rReps||0)>0||(c.rInterval||0)>0:c.reps>0||c.interval>0;}).sort(()=>Math.random()-.5);
-      const fresh=due.filter(d=>{const c=d.card;return d.rev?!(c.rReps||0)&&!(c.rInterval||0):!c.reps&&!c.interval;}).sort(()=>Math.random()-.5);
-      S.queue=[...reviewed,...fresh].map(d=>({id:d.card.id,rev:d.rev}));
-      S.idx=0;S.shown=-1;S.nrev=0;S.flipped=false;S.lastRating=null;S.view='review';render();
+    case 'start':S.queue=buildQueue();S.idx=0;S.shown=-1;S.nrev=0;S.nnew=0;S.flipped=false;S.lastRating=null;S.view='review';render();break;
+    case 'npd':{
+      const n=Math.min(NEW_MAX,Math.max(0,npd()+parseInt(v)));
+      if(n!==npd()){S.npd=n;addOp({t:'cfg',k:'npd',v:n});later(1000);render();}
     }break;
     case 'flip':S.flipped=true;render();break;
     case 'rate':{
       const entry=S.queue[S.idx];
       const card=entry&&S.cards.find(c=>c.id===entry.id);
-      if(card){const r=parseInt(v);let f,g;
+      if(card){const r=parseInt(v),t=fmtD(new Date()),nw=!entry.rev&&isNewF(card);let f,g;
         if(entry.rev){const upd=sm2({ef:card.rEf||2.5,interval:card.rInterval||0,reps:card.rReps||0},r);f={rEf:upd.ef,rInterval:upd.interval,rReps:upd.reps,rNextReview:upd.nextReview};g='r';}
-        else{const upd=sm2(card,r);f={ef:upd.ef,interval:upd.interval,reps:upd.reps,nextReview:upd.nextReview};g='f';if(r>=2&&!card.rNextReview){const d=new Date();d.setDate(d.getDate()+1);f.rNextReview=fmtD(d);}}
-        S.lastRating={idx:S.idx,rating:r,g,keys:Object.keys(f),snap:{ef:card.ef,interval:card.interval,reps:card.reps,nextReview:card.nextReview,rEf:card.rEf,rInterval:card.rInterval,rReps:card.rReps,rNextReview:card.rNextReview}};
-        S.rcounts[r]++;saveRC();S.nrev=(S.nrev||0)+1;
+        else{const upd=sm2(card,r);f={ef:upd.ef,interval:upd.interval,reps:upd.reps,nextReview:upd.nextReview};g='f';
+          if(nw)f.nd=t;  // 新しい単語を入れた日
+          // 裏の初めては、表に初めて正解した次の日から。取り込んだ単語は裏の期日が取り込んだ日のままなので、ここで次の日にする
+          if(r>=2&&!card.rNextReview||r>=1&&!(card.reps>=1)&&isNewR(card)&&card.rNextReview<=t){const d=new Date();d.setDate(d.getDate()+1);f.rNextReview=fmtD(d);}}
+        S.lastRating={idx:S.idx,rating:r,g,nw,keys:Object.keys(f),snap:{ef:card.ef,interval:card.interval,reps:card.reps,nextReview:card.nextReview,rEf:card.rEf,rInterval:card.rInterval,rReps:card.rReps,rNextReview:card.rNextReview,nd:card.nd}};
+        S.rcounts[r]++;saveRC();S.nrev=(S.nrev||0)+1;if(nw)S.nnew=(S.nnew||0)+1;
         change(card.id,f,g);later(1500);}
       S.idx++;S.flipped=false;render();
     }break;
@@ -463,7 +517,7 @@ function handleA(e){
       // 取り消すのは、その評価で変えた項目だけ（もとが無かった項目は消す）
       const f={};for(const k of lr.keys)f[k]=lr.snap[k]===undefined?null:lr.snap[k];
       change(entry.id,f,lr.g);later(1500);
-      S.rcounts[lr.rating]--;saveRC();S.nrev=Math.max(0,(S.nrev||0)-1);
+      S.rcounts[lr.rating]--;saveRC();S.nrev=Math.max(0,(S.nrev||0)-1);if(lr.nw)S.nnew=Math.max(0,(S.nnew||0)-1);
       S.idx=lr.idx;S.flipped=false;S.lastRating=null;render();
     }break;
     case 'cancel':S.view=S.editId?'list':'home';S.editId=null;render();break;

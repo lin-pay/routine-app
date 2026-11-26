@@ -373,14 +373,14 @@ const NWIN=45;               // 通知: 予定時刻からこの分数以内な�
 // 空にすると前面表示中のみの通知に戻る。
 const VAPID_KEY='BDG75Fy7Nbw4yc_0bEaRzcwre870sXZG12s7wFFa_C96QsxPEK0Mc6hcX2QI6vabBa3E-Uds0kWSjPnEXGkdX8Q';
 // ── 技術士（森林部門）──
-// 令和9年度以降の日程は未発表（例年3月に公表）。例年の規則からの推定なので、公表されたら日付を直して G_EST を false に
+// 一次（令和9年度）は 2026-11-19 の文科省 試験部会で決まった案の日付。二次（2028年＝令和10年度）は例年の規則からの推定（est:1）。
+// 翌年度の案は毎年11月の試験部会で出るので、出たら日付を直して est を外す
 const G_MILES=[
   {d:'2027-06-09',e:'2027-06-22',t:'一次 申込（WEB）'},
-  {d:'2027-11-28',t:'一次試験',exam:1},
-  {d:'2028-04-01',e:'2028-04-14',t:'二次 申込（WEB）'},
-  {d:'2028-07-17',t:'二次 筆記'},
-  {d:'2028-12-01',e:'2029-01-31',t:'二次 口頭（東京）'}];
-const G_EST=true;
+  {d:'2027-11-21',t:'一次試験',exam:1},
+  {d:'2028-04-01',e:'2028-04-14',t:'二次 申込（WEB）',est:1},
+  {d:'2028-07-17',t:'二次 筆記',est:1},
+  {d:'2028-12-01',e:'2029-01-31',t:'二次 口頭（東京）',est:1}];
 const G_SUBJ={shinrin:'森林',kiso:'基礎',tekisei:'適性'};
 const G_GOAL=10;                 // 1日の目標問題数。達するとルーティンの「技術士」（link:'gq'）に✓
 const G_BOX=[0,1,3,7,14,30,60,120,240];  // 正解を重ねるごとに次の出題までの日数をのばす（60日で頭打ちにすると、覚えた問題の復習だけで毎日の10問が埋まる）
@@ -1152,7 +1152,7 @@ function gMd(ds,from){const d=parseD(ds);return(from&&parseD(from).getFullYear()
 function renderGHome(){
   const td=fmtD(new Date()),ex=G_MILES.find(m=>m.exam);
   let h=`<div class="app-inner fv">
-    <div class="header"><div><div class="date-label">技術士 第一次試験まで${G_EST?'（予定）':''}</div><div class="greeting">あと ${gDays(ex.d)} 日</div></div><div style="display:flex;gap:6px"><button class="hbtn" data-a="gWP" title="森林・林業白書">📗</button><button class="hbtn" data-a="gJList" title="業務記録">📝</button></div></div>`;
+    <div class="header"><div><div class="date-label">技術士 第一次試験まで${ex.est?'（予定）':''}</div><div class="greeting">あと ${gDays(ex.d)} 日</div></div><div style="display:flex;gap:6px"><button class="hbtn" data-a="gWP" title="森林・林業白書">📗</button><button class="hbtn" data-a="gJList" title="業務記録">📝</button></div></div>`;
   if(!gSets().length)h+=`<div class="note">過去問のデータがまだ入っていません。</div>`;
   else{
     const st=gStats(),dk=gDailyKeys(),dueN=dk.filter(k=>S.gP.q[k]).length,newN=dk.length-dueN,weak=gWeak().length,rv=gRvKeys().length;
@@ -1173,9 +1173,9 @@ function renderGHome(){
   h+=`<div class="sec-t">業務記録（二次試験の材料）</div>${renderGJSummary()}
     <div class="sec-t">森林・林業白書（二次試験の柱）</div>
     <div class="tsr gj-item" data-a="gWP"><div class="tsh"><div class="tsn">📗 ${G_WP[0].y} 森林・林業白書</div><div class="tsv" style="font-size:12px">開く ›</div></div><div class="tsm"><span>特集・第1〜5章・概要・検索</span><span>${G_WP.length}年度分</span></div></div>
-    <div class="sec-t">日程${G_EST?'（令和9年度以降は例年からの推定）':''}</div>
-    <div class="hmwrap">${G_MILES.map(m=>{const past=(m.e||m.d)<td,dd=gDays(m.d);return`<div class="gq-ms${past?' past':''}"><div class="gq-md">${gMd(m.d)}${m.e?'〜'+gMd(m.e,m.d):''}</div><div class="gq-mt">${esc(m.t)}${G_EST?' <span style="font-size:10px;color:var(--dim)">予定</span>':''}</div><div class="gq-mc">${past?'済':dd>0?`あと${dd}日`:'期間中'}</div></div>`;}).join('')}</div>
-    <div class="note">試験はすべて日本国内（一次は17都道府県、二次の筆記は12都道府県、口頭は東京）。</div>
+    <div class="sec-t">日程${G_MILES.some(m=>m.est)?'（「予定」は例年からの推定）':''}</div>
+    <div class="hmwrap">${G_MILES.map(m=>{const past=(m.e||m.d)<td,dd=gDays(m.d);return`<div class="gq-ms${past?' past':''}"><div class="gq-md">${gMd(m.d)}${m.e?'〜'+gMd(m.e,m.d):''}</div><div class="gq-mt">${esc(m.t)}${m.est?' <span style="font-size:10px;color:var(--dim)">予定</span>':''}</div><div class="gq-mc">${past?'済':dd>0?`あと${dd}日`:'期間中'}</div></div>`;}).join('')}</div>
+    <div class="note">試験はすべて日本国内（令和9年度は一次が20都道府県、二次の筆記が17都道府県、口頭は東京）。</div>
   </div>`;
   return h;
 }
